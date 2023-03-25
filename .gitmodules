@@ -1,0 +1,9 @@
+[submodule "src/submodules/asio"]
+	path = src/submodules/asio
+	url = https://github.com/chriskohlhoff/asio
+[submodule "src/submodules/spdlog"]
+	path = src/submodules/spdlog
+	url = https://github.com/gabime/spdlog
+[submodule "src/submodules/tclap"]
+	path = src/submodules/tclap
+	url = https://github.com/mirror/tclap
