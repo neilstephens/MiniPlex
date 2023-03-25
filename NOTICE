@@ -1,7 +1,7 @@
 ---Copies of licenses referenced below are contained in 3rdPartyLicenses directory
 
 
-opendatacon is compiled with some external third party dependancies:
+Minplex is compiled with some external third party dependancies:
 
     //
     // asio.hpp - https://think-async.com/
@@ -69,3 +69,28 @@ opendatacon is compiled with some external third party dependancies:
     // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
     // THE SOFTWARE.
     
+Miniplex also derrives some code from opendatacon. For example, the CMakeLists.txt is mostly
+bits and pieces from opendatacon. Any non-trivial blocks of code are attributed in the source.
+
+	https://github.com/neilstephens/opendatacon
+	Flexible, highly configurable, modular, high performance, asynchronous, free, open source data concentrator.
+
+/*	opendatacon
+ *
+ *	Copyright (c) 2014:
+ *
+ *		DCrip3fJguWgVCLrZFfA7sIGgvx1Ou3fHfCxnrz4svAi
+ *		yxeOtDhDCXf1Z4ApgXvX5ahqQmzRfJ2DoX8S05SqHA==
+ *
+ *	Licensed under the Apache License, Version 2.0 (the "License");
+ *	you may not use this file except in compliance with the License.
+ *	You may obtain a copy of the License at
+ *
+ *		http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *	Unless required by applicable law or agreed to in writing, software
+ *	distributed under the License is distributed on an "AS IS" BASIS,
+ *	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *	See the License for the specific language governing permissions and
+ *	limitations under the License.
+ */
