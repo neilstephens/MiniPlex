@@ -36,7 +36,7 @@ private:
 	const CmdArgs& Args;
 	asio::io_context& IOC;
 	asio::ip::udp::socket socket;
-	TimeoutCache<std::string> EndPointCache;
+	TimeoutCache<asio::ip::udp::endpoint> EndPointCache;
 
 	std::array<uint8_t,65*1024> rcv_buf;
 	asio::ip::udp::endpoint rcv_sender;

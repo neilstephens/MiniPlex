@@ -18,16 +18,15 @@
 #include "MiniPlex.h"
 #include "CmdArgs.h"
 #include <asio.hpp>
+#include <memory>
 
 MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 	Args(Args),
 	IOC(IOC),
-	socket(IOC),
+	socket(IOC,asio::ip::udp::endpoint(asio::ip::address::from_string(Args.LocalAddr.getValue()),Args.LocalPort.getValue())),
 	EndPointCache(IOC,Args.CacheTimeout.getValue())
 {
-	socket.open(asio::ip::udp::v6());
-	socket.bind(asio::ip::udp::endpoint(asio::ip::address::from_string(Args.LocalAddr.getValue()),Args.LocalPort.getValue()));
-	socket.async_receive_from(asio::buffer(rcv_buf),rcv_sender,[&](asio::error_code err, size_t n)
+	socket.async_receive_from(asio::buffer(rcv_buf),rcv_sender,[this](asio::error_code err, size_t n)
 	{
 		RcvHandler(err,n);
 	});
@@ -37,6 +36,7 @@ void MiniPlex::Stop()
 {
 	socket.cancel();
 	socket.close();
+	EndPointCache.Clear();
 }
 
 void MiniPlex::RcvHandler(const asio::error_code err, const size_t n)
@@ -45,15 +45,17 @@ void MiniPlex::RcvHandler(const asio::error_code err, const size_t n)
 		return;
 
 	auto sender_string = rcv_sender.address().to_string()+":"+std::to_string(rcv_sender.port());
-	EndPointCache.Add(sender_string);
+	std::cout<<"RcvHandler(): "<<n<<" bytes from "<<sender_string<<std::endl;
 
-	std::cout<<"RcvHandler():"<<sender_string<<std::endl;
+	EndPointCache.Add(rcv_sender);
 
-	//TODO: do something instead of just print
-	std::string_view str((char*)&rcv_buf,n);
-	std::cout<<str<<std::flush;
+	auto pForwardBuf = std::make_shared<uint8_t[]>(n);
+	std::memcpy(pForwardBuf.get(),&rcv_buf,n);
+	for(const auto& endpoint : EndPointCache.Keys())
+		if(endpoint != rcv_sender)
+			socket.async_send_to(asio::buffer(pForwardBuf.get(),n),endpoint,[pForwardBuf](asio::error_code,size_t){});
 
-	socket.async_receive_from(asio::buffer(rcv_buf),rcv_sender,[&](asio::error_code err, size_t n)
+	socket.async_receive_from(asio::buffer(rcv_buf),rcv_sender,[this](asio::error_code err, size_t n)
 	{
 		RcvHandler(err,n);
 	});

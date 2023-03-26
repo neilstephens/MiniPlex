@@ -14,6 +14,11 @@ public:
 		IOC(IOC),
 		timeout(timeout_ms)
 	{}
+	void Clear()
+	{
+		std::unique_lock<std::shared_mutex> write_lck(mtx);
+		Cache.clear();
+	}
 	void Add(const T& key)
 	{
 		std::shared_lock<std::shared_mutex> lck(mtx);
@@ -39,10 +44,10 @@ public:
 			Cache.erase(key);
 		});
 	}
-	const std::vector<const T> Keys() const
+	const std::vector<T> Keys() const
 	{
 		std::shared_lock<std::shared_mutex> lck(mtx);
-		std::vector<const T> keys;
+		std::vector<T> keys;
 		for(auto& [key,t] : Cache)
 			keys.emplace_back(key);
 		return keys;
