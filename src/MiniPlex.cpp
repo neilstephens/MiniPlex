@@ -22,7 +22,8 @@
 MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 	Args(Args),
 	IOC(IOC),
-	socket(IOC)
+	socket(IOC),
+	EndPointCache(IOC,Args.CacheTimeout.getValue())
 {
 	socket.open(asio::ip::udp::v6());
 	socket.bind(asio::ip::udp::endpoint(asio::ip::address::from_string(Args.LocalAddr.getValue()),Args.LocalPort.getValue()));
@@ -43,7 +44,10 @@ void MiniPlex::RcvHandler(const asio::error_code err, const size_t n)
 	if(err)
 		return;
 
-	std::cout<<"RcvHandler():"<<rcv_sender.address().to_string()<<std::endl;
+	auto sender_string = rcv_sender.address().to_string()+":"+std::to_string(rcv_sender.port());
+	EndPointCache.Add(sender_string);
+
+	std::cout<<"RcvHandler():"<<sender_string<<std::endl;
 
 	//TODO: do something instead of just print
 	std::string_view str((char*)&rcv_buf,n);

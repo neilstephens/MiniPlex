@@ -13,6 +13,7 @@ struct CmdArgs
 		Prune("P", "prune", "Like Trunk mode, but limits flow to one (first in best dressed) branch"),
 		LocalAddr("l", "local", "Local ip address. Defaults to 0.0.0.0 for all interfaces.", false, "::", "localaddr"),
 		LocalPort("p", "port", "Local port to listen/receive on.", true, 0, "port"),
+		CacheTimeout("o", "timeout", "Milliseconds to keep an idle endpoint cached",false,10000,"timeout"),
 		TrunkAddr("r", "trunkip", "Remote trunk ip address.", false, "", "trunkhost"),
 		TrunkPort("t", "trunkport", "Remote trunk port.", false, 0, "trunkport"),
 		ConcurrencyHint("x", "concurrency", "A hint for the number of threads in thread pool. Defaults to detected hardware concurrency.",false,std::thread::hardware_concurrency(),"numthreads")
@@ -31,6 +32,7 @@ struct CmdArgs
 	TCLAP::SwitchArg Prune;
 	TCLAP::ValueArg<std::string> LocalAddr;
 	TCLAP::ValueArg<uint16_t> LocalPort;
+	TCLAP::ValueArg<size_t> CacheTimeout;
 	TCLAP::ValueArg<std::string> TrunkAddr;
 	TCLAP::ValueArg<uint16_t> TrunkPort;
 	TCLAP::ValueArg<int> ConcurrencyHint;

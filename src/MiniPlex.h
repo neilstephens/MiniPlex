@@ -18,7 +18,9 @@
 #ifndef MINIPLEX_H
 #define MINIPLEX_H
 
+#include "TimeoutCache.h"
 #include <asio.hpp>
+#include <string>
 
 class CmdArgs;
 
@@ -34,6 +36,8 @@ private:
 	const CmdArgs& Args;
 	asio::io_context& IOC;
 	asio::ip::udp::socket socket;
+	TimeoutCache<std::string> EndPointCache;
+
 	std::array<uint8_t,65*1024> rcv_buf;
 	asio::ip::udp::endpoint rcv_sender;
 };
