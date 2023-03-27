@@ -5,10 +5,10 @@
 
 USAGE: 
 
-   ./MiniPlex  {-H|-T|-P} -p <port> [-l <localaddr>] [-r <trunkhost>] [-t
-               <trunkport>] [-c <console log level>] [-f <file log level>]
-               [-F <log filename>] [-S <size in kB>] [-N <number of files>]
-               [-x <numthreads>] [--] [--version] [-h]
+   ./MiniPlex  {-H|-T|-P} -p <port> [-l <localaddr>] [-o <timeout>] [-r
+               <trunkhost>] [-t <trunkport>] [-c <console log level>] [-f
+               <file log level>] [-F <log filename>] [-S <size in kB>] [-N
+               <number of files>] [-x <numthreads>] [--] [--version] [-h]
 
 
 Where: 
@@ -30,6 +30,9 @@ Where:
 
    -l <localaddr>,  --local <localaddr>
      Local ip address. Defaults to 0.0.0.0 for all ipv4 interfaces.
+
+   -o <timeout>,  --timeout <timeout>
+     Milliseconds to keep an idle endpoint cached
 
    -r <trunkhost>,  --trunk_ip <trunkhost>
      Remote trunk ip address.
