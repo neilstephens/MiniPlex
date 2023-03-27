@@ -44,8 +44,7 @@ try
 	for(int i = 0; i < Args.ConcurrencyHint.getValue(); i++)
 		threads.emplace_back([&](){ IOC.run(); });
 
-	asio::signal_set signals(IOC,SIGINT,SIGTERM,SIGQUIT);
-	signals.add(SIGABRT);
+	asio::signal_set signals(IOC,SIGINT,SIGTERM,SIGABRT);
 	signals.async_wait([&](asio::error_code err, int sig)
 	{
 		if(!err)
