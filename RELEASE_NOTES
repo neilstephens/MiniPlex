@@ -2,3 +2,6 @@
 
 ## 0.1.0
   * Initial release
+  * Supports UDP Hub/Trunk/Prune
+  * No support for TCP yet
+
