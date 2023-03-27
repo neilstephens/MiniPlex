@@ -1,4 +1,6 @@
 # MiniPlex
+
+## Synopsis
 ```
 
 USAGE: 
@@ -63,3 +65,26 @@ Where:
    rudimentary multi-cast/multi-path or combine connections.
    
 ```
+
+## Build
+
+Assuming
+  * You've git cloned this repo into a directory called 'MiniPlex' (source directory),
+  * Created an adjacent build directory called MiniPlex-bin,
+  * Have the appropriate c++20 toolchain installed (earlier version might work, but aren't tested):
+    * g++ >= 9.4.0, or
+    * clang >= 10.0.0, or
+    * MSVC >= VS 2019 v16.11
+
+### Configure the build
+
+```
+cmake -S MiniPlex -B MiniPlex-bin
+```
+This will automatically clone and init the submodules repo dependencies for spdlog, tclap and asio and configure the default build system.
+
+### Run the build
+```
+cmake --build MiniPlex-bin
+```
+You should have a MiniPlex executable in MiniPlex-bin. See the synopis above for how to use it.
