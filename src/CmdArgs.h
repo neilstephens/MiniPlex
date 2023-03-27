@@ -50,6 +50,7 @@ struct CmdArgs
 		cmd.add(ConsoleLevel);
 		cmd.add(TrunkPort);
 		cmd.add(TrunkAddr);
+		cmd.add(CacheTimeout);
 		cmd.add(LocalAddr);
 		cmd.add(LocalPort);
 		cmd.xorAdd({&Hub,&Trunk,&Prune});

@@ -31,6 +31,7 @@ public:
 	void Stop();
 
 private:
+	void Rcv();
 	void RcvHandler(const asio::error_code err, const size_t n);
 
 	const CmdArgs& Args;
