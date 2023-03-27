@@ -22,7 +22,7 @@
 #include <asio.hpp>
 #include <string>
 
-class CmdArgs;
+struct CmdArgs;
 
 class MiniPlex
 {
