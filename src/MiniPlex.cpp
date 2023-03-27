@@ -70,7 +70,10 @@ void MiniPlex::RcvHandler(const asio::error_code err, const size_t n)
 		EndPointCache.Add(rcv_sender);
 	}
 
-	auto pForwardBuf = std::make_shared<uint8_t[]>(n);
+	// The C++20 way causes a malloc error when asio tries to copy a handler with this style shared_ptr
+	//auto pForwardBuf = std::make_shared<uint8_t[]>(n);
+	// Use the old way instead - only difference should be the control block is allocated separately
+	auto pForwardBuf = std::shared_ptr<uint8_t>(new uint8_t[n],[](uint8_t* p){delete[] p;});
 	std::memcpy(pForwardBuf.get(),rcv_buf.data(),n);
 	if(Args.Hub || rcv_sender == trunk)
 	{
