@@ -11,14 +11,20 @@ struct CmdArgs
 		Hub("H", "hub", "Hub/Star mode: Forward datagrams from/to all endpoints."),
 		Trunk("T", "trunk", "Trunk mode: Forward frames from a 'trunk' to other endpoints. Forward datagrams from other endpoints to the trunk."),
 		Prune("P", "prune", "Like Trunk mode, but limits flow to one (first in best dressed) branch"),
-		LocalAddr("l", "local", "Local ip address. Defaults to 0.0.0.0 for all interfaces.", false, "::", "localaddr"),
+		LocalAddr("l", "local", "Local ip address. Defaults to 0.0.0.0 for all ipv4 interfaces.", false, "0.0.0.0", "localaddr"),
 		LocalPort("p", "port", "Local port to listen/receive on.", true, 0, "port"),
 		CacheTimeout("o", "timeout", "Milliseconds to keep an idle endpoint cached",false,10000,"timeout"),
-		TrunkAddr("r", "trunkip", "Remote trunk ip address.", false, "", "trunkhost"),
-		TrunkPort("t", "trunkport", "Remote trunk port.", false, 0, "trunkport"),
+		TrunkAddr("r", "trunk_ip", "Remote trunk ip address.", false, "", "trunkhost"),
+		TrunkPort("t", "trunk_port", "Remote trunk port.", false, 0, "trunkport"),
+		ConsoleLevel("c", "console_logging", "Console log level: off, critical, error, warn, info, debug, or trace. Default off.", false, "off", "console log level"),
+		FileLevel("f", "file_logging", "File log level: off, critical, error, warn, info, debug, or trace. Default error.", false, "error", "file log level"),
+		LogFile("F", "log_file", "Log filename. Defaults to ./MiniPlex.log",false,"MiniPlex.log","log filename"),
 		ConcurrencyHint("x", "concurrency", "A hint for the number of threads in thread pool. Defaults to detected hardware concurrency.",false,std::thread::hardware_concurrency(),"numthreads")
 	{
 		cmd.add(ConcurrencyHint);
+		cmd.add(LogFile);
+		cmd.add(FileLevel);
+		cmd.add(ConsoleLevel);
 		cmd.add(TrunkPort);
 		cmd.add(TrunkAddr);
 		cmd.add(LocalAddr);
@@ -35,6 +41,9 @@ struct CmdArgs
 	TCLAP::ValueArg<size_t> CacheTimeout;
 	TCLAP::ValueArg<std::string> TrunkAddr;
 	TCLAP::ValueArg<uint16_t> TrunkPort;
+	TCLAP::ValueArg<std::string> ConsoleLevel;
+	TCLAP::ValueArg<std::string> FileLevel;
+	TCLAP::ValueArg<std::string> LogFile;
 	TCLAP::ValueArg<int> ConcurrencyHint;
 };
 
