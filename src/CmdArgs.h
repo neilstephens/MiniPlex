@@ -3,6 +3,8 @@
 
 #include <tclap/CmdLine.h>
 #include <thread>
+#include <exception>
+#include <asio.hpp>
 
 struct CmdArgs
 {
@@ -18,10 +20,14 @@ struct CmdArgs
 		TrunkPort("t", "trunk_port", "Remote trunk port.", false, 0, "trunkport"),
 		ConsoleLevel("c", "console_logging", "Console log level: off, critical, error, warn, info, debug, or trace. Default off.", false, "off", "console log level"),
 		FileLevel("f", "file_logging", "File log level: off, critical, error, warn, info, debug, or trace. Default error.", false, "error", "file log level"),
-		LogFile("F", "log_file", "Log filename. Defaults to ./MiniPlex.log",false,"MiniPlex.log","log filename"),
+		LogFile("F", "log_file", "Log filename. Defaults to ./MiniPlex.log", false, "MiniPlex.log", "log filename"),
+		LogSize("S", "log_size", "Roll the log file at this many kB. Defaults to 5000", false, 5000, "size in kB"),
+		LogNum("N", "log_num", "Keep this many log files when rolling the log. Defaults to 3", false, 3, "number of files"),
 		ConcurrencyHint("x", "concurrency", "A hint for the number of threads in thread pool. Defaults to detected hardware concurrency.",false,std::thread::hardware_concurrency(),"numthreads")
 	{
 		cmd.add(ConcurrencyHint);
+		cmd.add(LogNum);
+		cmd.add(LogSize);
 		cmd.add(LogFile);
 		cmd.add(FileLevel);
 		cmd.add(ConsoleLevel);
@@ -31,6 +37,20 @@ struct CmdArgs
 		cmd.add(LocalPort);
 		cmd.xorAdd({&Hub,&Trunk,&Prune});
 		cmd.parse(argc, argv);
+
+		if(!Hub && (TrunkAddr.getValue() == "" || TrunkPort.getValue() == 0))
+			throw std::invalid_argument("Trunk ip and port required when not in Hub mode.");
+
+		asio::error_code err;
+		asio::ip::address::from_string(LocalAddr.getValue(),err);
+		if(err)
+			throw std::invalid_argument("Invalid Local IP address: "+LocalAddr.getValue());
+		if(!Hub)
+		{
+			asio::ip::address::from_string(TrunkAddr.getValue(),err);
+			if(err)
+				throw std::invalid_argument("Invalid Trunk IP address: "+TrunkAddr.getValue());
+		}
 	}
 	TCLAP::CmdLine cmd;
 	TCLAP::SwitchArg Hub;
@@ -44,6 +64,8 @@ struct CmdArgs
 	TCLAP::ValueArg<std::string> ConsoleLevel;
 	TCLAP::ValueArg<std::string> FileLevel;
 	TCLAP::ValueArg<std::string> LogFile;
+	TCLAP::ValueArg<size_t> LogSize;
+	TCLAP::ValueArg<size_t> LogNum;
 	TCLAP::ValueArg<int> ConcurrencyHint;
 };
 

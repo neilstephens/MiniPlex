@@ -7,7 +7,8 @@ USAGE:
 
    ./MiniPlex  {-H|-T|-P} -p <port> [-l <localaddr>] [-r <trunkhost>] [-t
                <trunkport>] [-c <console log level>] [-f <file log level>]
-               [-F <log filename>] [-x <numthreads>] [--] [--version] [-h]
+               [-F <log filename>] [-S <size in kB>] [-N <number of files>]
+               [-x <numthreads>] [--] [--version] [-h]
 
 
 Where: 
@@ -46,6 +47,12 @@ Where:
 
    -F <log filename>,  --log_file <log filename>
      Log filename. Defaults to ./MiniPlex.log
+
+   -S <size in kB>,  --log_size <size in kB>
+     Roll the log file at this many kB. Defaults to 5000
+
+   -N <number of files>,  --log_num <number of files>
+     Keep this many log files when rolling the log. Defaults to 3
 
    -x <numthreads>,  --concurrency <numthreads>
      A hint for the number of threads in thread pool. Defaults to detected
