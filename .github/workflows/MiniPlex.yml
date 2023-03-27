@@ -44,8 +44,39 @@ jobs:
       name: Upload Exes
       uses: actions/upload-artifact@v2
       with:
-        name: ${{env.JOB_NAME}}_exe
-        retention-days: 30
+        name: MiniPlex_${{env.JOB_NAME}}_exe
+        retention-days: 7
         path: |
           ${{github.workspace}}/build/MiniPlex
           ${{github.workspace}}/build/**/MiniPlex.exe
+
+  deploy-job:
+    if: always() && contains(github.ref, 'tag')
+    needs: [build-job]
+    runs-on: macos-latest
+    steps:
+      - name: Download Exes
+        uses: actions/download-artifact@v2
+        with:
+          name: *_exe
+          extract: false
+          
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: false
+          files: *_exe.zip
+          fail_on_unmatched_files: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  clean-job:
+    if: always()
+    needs: [build-job]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove old artifacts
+        uses: c-hive/gha-remove-artifacts@v1
+        with:
+          age: '1 week'
+          skip-recent: 5
+          skip-tags: false
