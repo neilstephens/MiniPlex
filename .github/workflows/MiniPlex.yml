@@ -53,15 +53,15 @@ jobs:
   deploy-job:
     if: always() && contains(github.ref, 'tag')
     needs: [build-job]
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Download Exes
-        uses: actions/download-artifact@v2
-        with:
-          name: |
-            *_exe
-          extract: false
-          
+        uses: actions/download-artifact@v3
+        
+      - name: Zip Exes
+        run: |
+          find -name "MiniPlex_*_exe" | xargs -I{} zip -r {}.zip {}
+        
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
