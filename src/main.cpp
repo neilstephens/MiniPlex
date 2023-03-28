@@ -63,8 +63,8 @@ try
 	for(auto& t : threads)
 		t.join();
 
-	spdlog::shutdown();
 	spdlog::get("MiniPlex")->info("Shutdown cleanly: return 0.");
+	spdlog::shutdown();
 	return 0;
 }
 catch(const std::exception& e)
