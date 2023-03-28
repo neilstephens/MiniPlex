@@ -49,6 +49,7 @@ jobs:
         path: |
           ${{github.workspace}}/build/MiniPlex
           ${{github.workspace}}/build/**/MiniPlex.exe
+          ${{github.workspace}}/build/**/MiniPlex.pdb
           LICENSE
           NOTICE
           README.md
