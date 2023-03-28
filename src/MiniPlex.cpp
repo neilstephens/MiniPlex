@@ -42,6 +42,7 @@ MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 
 void MiniPlex::Stop()
 {
+	stopping = true;
 	socket.cancel();
 	socket.close();
 	EndPointCache.Clear();
@@ -58,7 +59,14 @@ void MiniPlex::Rcv()
 void MiniPlex::RcvHandler(const asio::error_code err, const size_t n)
 {
 	if(err)
+	{
+		if(!stopping)
+		{
+			spdlog::get("MiniPlex")->error("RcvHandler(): error code {}: '{}'",err.value(),err.message());
+			Rcv();
+		}
 		return;
+	}
 
 	auto sender_string = rcv_sender.address().to_string()+":"+std::to_string(rcv_sender.port());
 	spdlog::get("MiniPlex")->trace("RcvHandler(): {} bytes from {}",n,sender_string);

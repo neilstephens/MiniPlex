@@ -42,6 +42,7 @@ private:
 
 	std::array<uint8_t,65*1024> rcv_buf;
 	asio::ip::udp::endpoint rcv_sender;
+	std::atomic_bool stopping = false;
 };
 
 #endif // MINIPLEX_H
