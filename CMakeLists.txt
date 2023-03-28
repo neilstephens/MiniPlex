@@ -81,5 +81,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/src/subm
 target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/src/submodules/tclap/include")
 target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/src/submodules/spdlog/include")
 target_link_libraries(${PROJECT_NAME} ${LIBCXX})
+set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ".")
 
