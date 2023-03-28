@@ -1,4 +1,5 @@
 # MiniPlex
+[![MiniPlex Workflow](https://github.com/neilstephens/MiniPlex/actions/workflows/MiniPlex.yml/badge.svg)](https://github.com/neilstephens/MiniPlex/actions/workflows/MiniPlex.yml)
 
 ## Synopsis
 ```
