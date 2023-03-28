@@ -28,8 +28,16 @@ MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 	EndPointCache(IOC,Args.CacheTimeout.getValue())
 {
 	if(Args.Trunk || Args.Prune)
+	{
 		trunk = asio::ip::udp::endpoint(asio::ip::address::from_string(Args.TrunkAddr.getValue()),Args.TrunkPort.getValue());
+		spdlog::get("MiniPlex")->info("Operating in Trunk mode to {}:{}",Args.TrunkAddr.getValue(),Args.TrunkPort.getValue());
+	}
+	else
+	{
+		spdlog::get("MiniPlex")->info("Operating in Hub mode.");
+	}
 	Rcv();
+	spdlog::get("MiniPlex")->info("Listening on {}:{}",Args.LocalAddr.getValue(),Args.LocalPort.getValue());
 }
 
 void MiniPlex::Stop()
@@ -66,8 +74,11 @@ void MiniPlex::RcvHandler(const asio::error_code err, const size_t n)
 
 	if(Args.Hub || rcv_sender != trunk)
 	{
-		spdlog::get("MiniPlex")->trace("RcvHandler(): refreshed cache for {}",sender_string);
-		EndPointCache.Add(rcv_sender);
+		auto added = EndPointCache.Add(rcv_sender,[sender_string]()
+		{
+			spdlog::get("MiniPlex")->debug("RcvHandler(): Cache entry for {} timed out.",sender_string);
+		});
+		spdlog::get("MiniPlex")->trace("RcvHandler(): {} cache entry for {}",added?"Inserted":"Refreshed",sender_string);
 	}
 
 	// The C++20 way causes a malloc error when asio tries to copy a handler with this style shared_ptr

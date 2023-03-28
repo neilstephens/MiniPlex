@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <chrono>
 #include <shared_mutex>
+#include <functional>
 
 template <typename T>
 class TimeoutCache
@@ -36,13 +37,15 @@ public:
 		std::unique_lock<std::shared_mutex> write_lck(mtx);
 		Cache.clear();
 	}
-	void Add(const T& key)
+	bool Add(const T& key, std::function<void()> timeout_handler = [](){})
 	{
+		bool added = true;
 		std::shared_lock<std::shared_mutex> lck(mtx);
 		auto timer_it = Cache.find(key);
 		if(timer_it != Cache.end()) //reset the existing timer
 		{
 			timer_it->second.expires_from_now(timeout);
+			added = false;
 		}
 		else //add a new timer
 		{
@@ -53,13 +56,17 @@ public:
 			}
 			lck.lock();
 		}
-		Cache.at(key).async_wait([this,key](asio::error_code err)
+		Cache.at(key).async_wait([this,key,timeout_handler](asio::error_code err)
 		{
 			if(err)
 				return;
-			std::unique_lock<std::shared_mutex> lck(mtx);
-			Cache.erase(key);
+			{//lock scope
+				std::unique_lock<std::shared_mutex> lck(mtx);
+				Cache.erase(key);
+			}
+			timeout_handler();
 		});
+		return added;
 	}
 	const std::vector<T> Keys() const
 	{

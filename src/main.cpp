@@ -44,6 +44,8 @@ try
 	for(int i = 0; i < Args.ConcurrencyHint.getValue(); i++)
 		threads.emplace_back([&](){ IOC.run(); });
 
+	spdlog::get("MiniPlex")->info("Thread pool started {} threads.",threads.size());
+
 	asio::signal_set signals(IOC,SIGINT,SIGTERM,SIGABRT);
 	signals.async_wait([&](asio::error_code err, int sig)
 	{
@@ -57,10 +59,12 @@ try
 
 	IOC.run();
 
+	spdlog::get("MiniPlex")->info("Joining threads.");
 	for(auto& t : threads)
 		t.join();
 
 	spdlog::shutdown();
+	spdlog::get("MiniPlex")->info("Shutdown cleanly: return 0.");
 	return 0;
 }
 catch(const std::exception& e)
