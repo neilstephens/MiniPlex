@@ -58,14 +58,16 @@ jobs:
       - name: Download Exes
         uses: actions/download-artifact@v2
         with:
-          name: *_exe
+          name: |
+            *_exe
           extract: false
           
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           draft: false
-          files: *_exe.zip
+          files: |
+            *_exe.zip
           fail_on_unmatched_files: false
           token: ${{ secrets.GITHUB_TOKEN }}
 
