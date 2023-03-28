@@ -49,6 +49,11 @@ jobs:
         path: |
           ${{github.workspace}}/build/MiniPlex
           ${{github.workspace}}/build/**/MiniPlex.exe
+          LICENSE
+          NOTICE
+          README.md
+          RELEASE_NOTES
+          3rdPartyLicenses/LICENSE_1_0.txt
 
   deploy-job:
     if: always() && contains(github.ref, 'tag')
