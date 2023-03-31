@@ -1,4 +1,8 @@
-# MiniPlex version 0.1.0
+# MiniPlex version 0.2.0
+
+## 0.2.0
+  * Proper static binaries for Windows
+  * Option for permanent cache entries (branches)
 
 ## 0.1.0
   * Initial release

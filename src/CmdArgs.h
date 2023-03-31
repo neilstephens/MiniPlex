@@ -26,7 +26,7 @@
 struct CmdArgs
 {
 	CmdArgs(int argc, char* argv[]):
-		cmd("A minimal UDP/TCP multiplexer/hub/broker. A simple way to bolt-on rudimentary multi-cast/multi-path or combine connections.",' ',"0.1.0"),
+		cmd("A minimal UDP/TCP multiplexer/hub/broker. A simple way to bolt-on rudimentary multi-cast/multi-path or combine connections.",' ',"0.2.0"),
 		Hub("H", "hub", "Hub/Star mode: Forward datagrams from/to all endpoints."),
 		Trunk("T", "trunk", "Trunk mode: Forward frames from a 'trunk' to other endpoints. Forward datagrams from other endpoints to the trunk."),
 		Prune("P", "prune", "Like Trunk mode, but limits flow to one (first in best dressed) branch"),
@@ -35,6 +35,8 @@ struct CmdArgs
 		CacheTimeout("o", "timeout", "Milliseconds to keep an idle endpoint cached",false,10000,"timeout"),
 		TrunkAddr("r", "trunk_ip", "Remote trunk ip address.", false, "", "trunkhost"),
 		TrunkPort("t", "trunk_port", "Remote trunk port.", false, 0, "trunkport"),
+		BranchAddrs("B", "branch_ip", "Remote endpoint addresses to permanently cache. Use -b to provide respective ports in the same order.", false, "branchhost"),
+		BranchPorts("b", "branch_port", "Remote endpoint port to permanently cache. Use -B to provide respective addresses in the same order.", false, "branchport"),
 		ConsoleLevel("c", "console_logging", "Console log level: off, critical, error, warn, info, debug, or trace. Default off.", false, "off", "console log level"),
 		FileLevel("f", "file_logging", "File log level: off, critical, error, warn, info, debug, or trace. Default error.", false, "error", "file log level"),
 		LogFile("F", "log_file", "Log filename. Defaults to ./MiniPlex.log", false, "MiniPlex.log", "log filename"),
@@ -48,6 +50,8 @@ struct CmdArgs
 		cmd.add(LogFile);
 		cmd.add(FileLevel);
 		cmd.add(ConsoleLevel);
+		cmd.add(BranchPorts);
+		cmd.add(BranchAddrs);
 		cmd.add(TrunkPort);
 		cmd.add(TrunkAddr);
 		cmd.add(CacheTimeout);
@@ -69,6 +73,16 @@ struct CmdArgs
 			if(err)
 				throw std::invalid_argument("Invalid Trunk IP address: "+TrunkAddr.getValue());
 		}
+		for(const auto& B : BranchAddrs.getValue())
+		{
+			asio::ip::address::from_string(B,err);
+			if(err)
+				throw std::invalid_argument("Invalid Branch IP address: "+B);
+		}
+		if(BranchAddrs.getValue().size() != BranchPorts.getValue().size())
+			throw std::invalid_argument("Please provide the same number of branch IPs and branch ports. They will be paired.");
+		if(Prune && BranchAddrs.getValue().size() > 0)
+			throw std::invalid_argument("Permanent cache entries (-B/b) invalidates Prune mode.");
 	}
 	TCLAP::CmdLine cmd;
 	TCLAP::SwitchArg Hub;
@@ -79,6 +93,8 @@ struct CmdArgs
 	TCLAP::ValueArg<size_t> CacheTimeout;
 	TCLAP::ValueArg<std::string> TrunkAddr;
 	TCLAP::ValueArg<uint16_t> TrunkPort;
+	TCLAP::MultiArg<std::string> BranchAddrs;
+	TCLAP::MultiArg<uint16_t> BranchPorts;
 	TCLAP::ValueArg<std::string> ConsoleLevel;
 	TCLAP::ValueArg<std::string> FileLevel;
 	TCLAP::ValueArg<std::string> LogFile;

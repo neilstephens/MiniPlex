@@ -37,7 +37,7 @@ public:
 		std::unique_lock<std::shared_mutex> write_lck(mtx);
 		Cache.clear();
 	}
-	bool Add(const T& key, std::function<void()> timeout_handler = [](){})
+	bool Add(const T& key, std::function<void()> timeout_handler = []{}, bool permanent = false)
 	{
 		bool added = true;
 		std::shared_lock<std::shared_mutex> lck(mtx);
@@ -56,9 +56,11 @@ public:
 			}
 			lck.lock();
 		}
-		Cache.at(key).async_wait([this,key,timeout_handler](asio::error_code err)
+		Cache.at(key).async_wait([this,key,timeout_handler,permanent](asio::error_code err)
 		{
 			if(err)
+				return;
+			if(permanent)
 				return;
 			{//lock scope
 				std::unique_lock<std::shared_mutex> lck(mtx);

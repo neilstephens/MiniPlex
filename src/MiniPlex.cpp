@@ -36,6 +36,11 @@ MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 	{
 		spdlog::get("MiniPlex")->info("Operating in Hub mode.");
 	}
+	for(size_t i=0; i<Args.BranchAddrs.getValue().size(); i++)
+	{
+		auto branch = asio::ip::udp::endpoint(asio::ip::address::from_string(Args.BranchAddrs.getValue()[i]),Args.BranchPorts.getValue()[i]);
+		EndPointCache.Add(branch,[]{},true);
+	}
 	Rcv();
 	spdlog::get("MiniPlex")->info("Listening on {}:{}",Args.LocalAddr.getValue(),Args.LocalPort.getValue());
 }
