@@ -42,8 +42,12 @@ struct CmdArgs
 		LogFile("F", "log_file", "Log filename. Defaults to ./MiniPlex.log", false, "MiniPlex.log", "log filename"),
 		LogSize("S", "log_size", "Roll the log file at this many kB. Defaults to 5000", false, 5000, "size in kB"),
 		LogNum("N", "log_num", "Keep this many log files when rolling the log. Defaults to 3", false, 3, "number of files"),
-		ConcurrencyHint("x", "concurrency", "A hint for the number of threads in thread pool. Defaults to detected hardware concurrency.",false,std::thread::hardware_concurrency(),"numthreads")
+		ConcurrencyHint("x", "concurrency", "A hint for the number of threads in thread pool. Defaults to detected hardware concurrency.",false,std::thread::hardware_concurrency(),"numthreads"),
+		Benchmark("M", "benchmark", "Run a loopback test for fixed duration (see -m) and exit."),
+		BenchDuration("m", "benchmark_duration", "Number of milliseconds to run the loopback benchmark test. Defaults to 10000.",false,10000,"milliseconds")
 	{
+		cmd.add(BenchDuration);
+		cmd.add(Benchmark);
 		cmd.add(ConcurrencyHint);
 		cmd.add(LogNum);
 		cmd.add(LogSize);
@@ -101,6 +105,8 @@ struct CmdArgs
 	TCLAP::ValueArg<size_t> LogSize;
 	TCLAP::ValueArg<size_t> LogNum;
 	TCLAP::ValueArg<int> ConcurrencyHint;
+	TCLAP::SwitchArg Benchmark;
+	TCLAP::ValueArg<size_t> BenchDuration;
 };
 
 #endif // CMDARGS_H

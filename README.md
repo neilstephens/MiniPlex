@@ -7,9 +7,11 @@
 USAGE: 
 
    ./MiniPlex  {-H|-T|-P} -p <port> [-l <localaddr>] [-o <timeout>] [-r
-               <trunkhost>] [-t <trunkport>] [-c <console log level>] [-f
-               <file log level>] [-F <log filename>] [-S <size in kB>] [-N
-               <number of files>] [-x <numthreads>] [--] [--version] [-h]
+               <trunkhost>] [-t <trunkport>] [-B <branchhost>] ... [-b
+               <branchport>] ... [-c <console log level>] [-f <file log
+               level>] [-F <log filename>] [-S <size in kB>] [-N <number of
+               files>] [-x <numthreads>] [-M] [-m <milliseconds>] [--]
+               [--version] [-h]
 
 
 Where: 
@@ -41,6 +43,14 @@ Where:
    -t <trunkport>,  --trunk_port <trunkport>
      Remote trunk port.
 
+   -B <branchhost>,  --branch_ip <branchhost>  (accepted multiple times)
+     Remote endpoint addresses to permanently cache. Use -b to provide
+     respective ports in the same order.
+
+   -b <branchport>,  --branch_port <branchport>  (accepted multiple times)
+     Remote endpoint port to permanently cache. Use -B to provide
+     respective addresses in the same order.
+
    -c <console log level>,  --console_logging <console log level>
      Console log level: off, critical, error, warn, info, debug, or trace.
      Default off.
@@ -61,6 +71,13 @@ Where:
    -x <numthreads>,  --concurrency <numthreads>
      A hint for the number of threads in thread pool. Defaults to detected
      hardware concurrency.
+
+   -M,  --benchmark
+     Run a loopback test for fixed duration (see -m) and exit.
+
+   -m <milliseconds>,  --benchmark_duration <milliseconds>
+     Number of milliseconds to run the loopback benchmark test. Defaults to
+     10000.
 
    --,  --ignore_rest
      Ignores the rest of the labeled arguments following this flag.

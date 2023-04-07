@@ -21,6 +21,7 @@
 #include "TimeoutCache.h"
 #include <asio.hpp>
 #include <string>
+#include <atomic>
 
 struct CmdArgs;
 
@@ -29,6 +30,7 @@ class MiniPlex
 public:
 	MiniPlex(const CmdArgs& Args, asio::io_context &IOC);
 	void Stop();
+	void Benchmark();
 
 private:
 	void Rcv();
@@ -43,6 +45,8 @@ private:
 	std::array<uint8_t,65*1024> rcv_buf;
 	asio::ip::udp::endpoint rcv_sender;
 	std::atomic_bool stopping = false;
+
+	std::atomic<size_t> rx_count = 0;
 };
 
 #endif // MINIPLEX_H

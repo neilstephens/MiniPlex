@@ -53,6 +53,8 @@ try
 		}
 	});
 
+	if(Args.Benchmark)
+		MP.Benchmark();
 	IOC.run();
 
 	spdlog::get("MiniPlex")->info("Joining threads.");
