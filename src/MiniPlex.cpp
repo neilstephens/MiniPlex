@@ -46,14 +46,6 @@ MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 	spdlog::get("MiniPlex")->info("Listening on {}:{}",Args.LocalAddr.getValue(),Args.LocalPort.getValue());
 }
 
-void MiniPlex::Stop()
-{
-	stopping = true;
-	socket.cancel();
-	socket.close();
-	EndPointCache.Clear();
-}
-
 void MiniPlex::Rcv()
 {
 	socket.async_receive_from(asio::buffer(rcv_buf.data(),rcv_buf.size()),rcv_sender,[this](asio::error_code err, size_t n)
@@ -66,11 +58,8 @@ void MiniPlex::RcvHandler(const asio::error_code err, const size_t n)
 {
 	if(err)
 	{
-		if(!stopping)
-		{
-			spdlog::get("MiniPlex")->error("RcvHandler(): error code {}: '{}'",err.value(),err.message());
-			Rcv();
-		}
+		spdlog::get("MiniPlex")->error("RcvHandler(): error code {}: '{}'",err.value(),err.message());
+		Rcv();
 		return;
 	}
 	rx_count++;
@@ -144,7 +133,7 @@ void MiniPlex::Benchmark()
 		else
 			IOC.poll_one();
 		elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time);
-	}while(elapsed < duration);
+	}while(elapsed < duration && !IOC.stopped());
 	spdlog::get("MiniPlex")->critical("Benchmark(): RX count {} over {}ms.",rx_count,elapsed.count());
 	std::raise(SIGINT);
 }

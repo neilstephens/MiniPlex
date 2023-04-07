@@ -49,7 +49,7 @@ try
 		{
 			spdlog::get("MiniPlex")->critical("Signal {}: shutting down.",sig);
 			work.reset();
-			MP.Stop();
+			IOC.stop();
 		}
 	});
 

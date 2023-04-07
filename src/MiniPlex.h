@@ -29,7 +29,6 @@ class MiniPlex
 {
 public:
 	MiniPlex(const CmdArgs& Args, asio::io_context &IOC);
-	void Stop();
 	void Benchmark();
 
 private:
