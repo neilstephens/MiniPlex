@@ -55,10 +55,54 @@ jobs:
           README.md
           RELEASE_NOTES
           3rdPartyLicenses/LICENSE_1_0.txt
+          
+  musl-build-job:
+    name: ${{matrix.os}} ${{matrix.build-type}}
+  
+    strategy:
+      fail-fast: false
+      
+      matrix:
+        build-type: [Release,Debug]
+
+    runs-on: ubuntu-latest
+
+    env:
+      BUILD_TYPE: ${{ matrix.build-type }}
+      JOB_NAME: static-linux_${{matrix.build-type}}
+
+    steps:
+    
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - run: git fetch --force --tags
+    
+    - name: Docker Build
+      run: docker build -t miniplex -f DockerFiles/MuslBuilder .
+
+    - name: Copy Exe
+      run: |
+        mkdir build
+        docker run -v $(pwd)/build:/build miniplex:latest cp MiniPlex-bin/MiniPlex /build/
+
+    - if: always()
+      name: Upload Exes
+      uses: actions/upload-artifact@v2
+      with:
+        name: MiniPlex_${{env.JOB_NAME}}_exe
+        retention-days: 7
+        path: |
+          ${{github.workspace}}/build/MiniPlex
+          LICENSE
+          NOTICE
+          README.md
+          RELEASE_NOTES
+          3rdPartyLicenses/LICENSE_1_0.txt
 
   deploy-job:
     if: always() && contains(github.ref, 'tag')
-    needs: [build-job]
+    needs: [build-job,musl-build-job]
     runs-on: ubuntu-latest
     steps:
       - name: Download Exes
