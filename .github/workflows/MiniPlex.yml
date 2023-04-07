@@ -84,7 +84,13 @@ jobs:
         echo 'STRIP_OPTION=--only-keep-debug' >> $GITHUB_ENV
     
     - name: Docker Build
-      run: docker build --build-arg BUILD_TYPE=${{env.BUILD_TYPE}} --build-arg STRIP_OPTION=${{env.STRIP_OPTION}} -t miniplex -f DockerFiles/MuslBuilder .
+      run: |
+        docker build \
+        --build-arg BUILD_TYPE=${{env.BUILD_TYPE}} \
+        --build-arg STRIP_OPTION=${{env.STRIP_OPTION}} \
+        --build-arg BUILD_COMMIT=${{ github.sha }} \
+        -t miniplex \
+        -f DockerFiles/MuslBuilder .
 
     - name: Copy Exe
       run: |
