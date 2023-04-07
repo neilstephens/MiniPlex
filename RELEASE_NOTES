@@ -1,6 +1,6 @@
-# MiniPlex version 0.2.1
+# MiniPlex version 0.2.2
 
-## 0.2.1
+## 0.2.2
   * Proper static binaries for Linux
     * Alpine Linux Dockefile to statically link musl libc
   * Benchmark mode

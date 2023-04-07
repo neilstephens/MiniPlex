@@ -81,7 +81,7 @@ jobs:
     - if: matrix.build-type == 'Debug'
       name: Set Debug Options
       run: |
-        echo 'STRIP_OPTION=--only-keep-debug' >> $GITHUB_ENV
+        echo 'STRIP_OPTION=-V' >> $GITHUB_ENV
     
     - name: Docker Build
       run: |
