@@ -24,7 +24,8 @@
 MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 	Args(Args),
 	IOC(IOC),
-	socket(IOC,asio::ip::udp::endpoint(asio::ip::address::from_string(Args.LocalAddr.getValue()),Args.LocalPort.getValue())),
+	local_ep(asio::ip::address::from_string(Args.LocalAddr.getValue()),Args.LocalPort.getValue()),
+	socket(IOC,local_ep),
 	EndPointCache(IOC,Args.CacheTimeout.getValue())
 {
 	if(Args.Trunk || Args.Prune)
@@ -118,7 +119,6 @@ void MiniPlex::RcvHandler(const asio::error_code err, const size_t n)
 
 void MiniPlex::Benchmark()
 {
-	auto ep = socket.local_endpoint();
 	const size_t sock_pool_count = 100;
 	std::vector<asio::ip::udp::socket> sock_pool;
 	for(size_t i=0; i<sock_pool_count; i++)
@@ -135,7 +135,7 @@ void MiniPlex::Benchmark()
 		if(tx_count < rx_count+50) //assume os can buffer 50 packets
 		{
 			auto pSock = &sock_pool[tx_count++%sock_pool_count];
-			IOC.post([ep,pSock]()
+			IOC.post([ep{local_ep},pSock]()
 			{
 				auto pForwardBuf = std::shared_ptr<uint8_t>(new uint8_t[500],[](uint8_t* p){delete[] p;});
 				pSock->async_send_to(asio::buffer(pForwardBuf.get(),500),ep,[pForwardBuf](asio::error_code,size_t){});

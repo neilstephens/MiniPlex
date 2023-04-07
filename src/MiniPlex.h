@@ -38,6 +38,7 @@ private:
 
 	const CmdArgs& Args;
 	asio::io_context& IOC;
+	const asio::ip::udp::endpoint local_ep;
 	asio::ip::udp::socket socket;
 	TimeoutCache<asio::ip::udp::endpoint> EndPointCache;
 	asio::ip::udp::endpoint trunk;
