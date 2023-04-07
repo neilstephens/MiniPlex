@@ -20,6 +20,7 @@
 #include <asio.hpp>
 #include <spdlog/spdlog.h>
 #include <memory>
+#include <csignal>
 
 MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 	Args(Args),

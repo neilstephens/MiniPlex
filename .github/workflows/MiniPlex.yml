@@ -57,7 +57,7 @@ jobs:
           3rdPartyLicenses/LICENSE_1_0.txt
           
   musl-build-job:
-    name: ${{matrix.os}} ${{matrix.build-type}}
+    name: linux-static ${{matrix.build-type}}
   
     strategy:
       fail-fast: false
@@ -69,7 +69,7 @@ jobs:
 
     env:
       BUILD_TYPE: ${{ matrix.build-type }}
-      JOB_NAME: static-linux_${{matrix.build-type}}
+      JOB_NAME: linux-static_${{matrix.build-type}}
 
     steps:
     
@@ -78,8 +78,13 @@ jobs:
         fetch-depth: 0
     - run: git fetch --force --tags
     
+    - if: matrix.build-type == 'Debug'
+      name: Set Debug Options
+      run: |
+        echo 'STRIP_OPTION=--only-keep-debug' >> $GITHUB_ENV
+    
     - name: Docker Build
-      run: docker build -t miniplex -f DockerFiles/MuslBuilder .
+      run: docker build --build-arg BUILD_TYPE=${{env.BUILD_TYPE}} --build-arg STRIP_OPTION=${{env.STRIP_OPTION}} -t miniplex -f DockerFiles/MuslBuilder .
 
     - name: Copy Exe
       run: |

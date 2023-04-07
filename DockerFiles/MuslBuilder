@@ -3,10 +3,12 @@
 FROM alpine:latest
 
 RUN apk update && apk add linux-headers g++ make cmake git
-RUN git clone https://github.com/neilstephens/MiniPlex.git
+RUN git clone --recurse-submodules https://github.com/neilstephens/MiniPlex.git
 ARG BUILD_COMMIT=main
+ARG BUILD_TYPE=Release
+ARG STRIP_OPTION=
 RUN git -C MiniPlex checkout $BUILD_COMMIT && \
 	mkdir MiniPlex-bin && \
-	cmake -DCMAKE_CXX_FLAGS=-static -S MiniPlex -B MiniPlex-bin && \
+	cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_FLAGS=-static -S MiniPlex -B MiniPlex-bin && \
 	cmake --build MiniPlex-bin --parallel 8 && \
-	strip MiniPlex-bin/MiniPlex
+	strip $STRIP_OPTION MiniPlex-bin/MiniPlex
