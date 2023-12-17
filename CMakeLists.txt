@@ -76,6 +76,8 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/src/submodules/spdlog/.git")
 	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endif()
 
+add_subdirectory("src/ProtoConv")
+
 add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SRC})
 target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/src/submodules/asio/asio/include")
 target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/src/submodules/tclap/include")

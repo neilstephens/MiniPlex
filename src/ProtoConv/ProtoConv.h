@@ -15,38 +15,40 @@
  *	limitations under the License.
  */
 
-#ifndef MINIPLEX_H
-#define MINIPLEX_H
+#ifndef PROTOCONV_H
+#define PROTOCONV_H
 
-#include "TimeoutCache.h"
+#include "FrameChecker.h"
+#include "StreamHandler.h"
 #include <asio.hpp>
-#include <string>
 #include <atomic>
+#include <memory>
 
 struct CmdArgs;
 
-class MiniPlex
+class ProtoConv
 {
 public:
-	MiniPlex(const CmdArgs& Args, asio::io_context &IOC);
-	void Benchmark();
+	ProtoConv(const CmdArgs& Args, asio::io_context &IOC);
 
 private:
-	void Rcv();
-	void RcvHandler(const asio::error_code err, const size_t n);
+
+	void RcvUDP();
+	void RcvUDPHandler(const asio::error_code err, const size_t n);
 
 	const CmdArgs& Args;
 	asio::io_context& IOC;
+
+	std::shared_ptr<FrameChecker> pFramer;
+	std::shared_ptr<StreamHandler> pStream;
+
 	const asio::ip::udp::endpoint local_ep;
+	const asio::ip::udp::endpoint remote_ep;
 	asio::ip::udp::socket socket;
-	TimeoutCache<asio::ip::udp::endpoint> EndPointCache;
-	asio::ip::udp::endpoint trunk;
 
 	std::array<uint8_t, 64L * 1024> rcv_buf{};
-	asio::ip::udp::endpoint rcv_sender;
-	std::atomic_bool stopping = false;
 
-	std::atomic<size_t> rx_count = 0;
+	std::atomic_bool stopping = false;
 };
 
-#endif // MINIPLEX_H
+#endif // PROTOCONV_H

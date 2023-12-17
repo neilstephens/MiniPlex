@@ -17,7 +17,7 @@
 
 #include "CmdArgs.h"
 #include "LogSetup.h"
-#include "MiniPlex.h"
+#include "ProtoConv.h"
 #include <asio.hpp>
 #include <spdlog/spdlog.h>
 #include <vector>
@@ -35,40 +35,38 @@ try
 	asio::io_context IOC(Args.ConcurrencyHint.getValue());
 	auto work = asio::make_work_guard(IOC);
 
-	MiniPlex MP(Args,IOC);
+	ProtoConv PC(Args,IOC);
 
 	std::vector<std::thread> threads;
 	for(int i = 0; i < Args.ConcurrencyHint.getValue(); i++)
 		threads.emplace_back([&](){ IOC.run(); });
 
-	spdlog::get("MiniPlex")->info("Thread pool started {} threads.",threads.size());
+	spdlog::get("ProtoConv")->info("Thread pool started {} threads.",threads.size());
 
 	asio::signal_set signals(IOC,SIGINT,SIGTERM,SIGABRT);
 	signals.async_wait([&](asio::error_code err, int sig)
 	{
 		if(!err)
 		{
-			spdlog::get("MiniPlex")->critical("Signal {}: shutting down.",sig);
+			spdlog::get("ProtoConv")->critical("Signal {}: shutting down.",sig);
 			work.reset();
 			IOC.stop();
 		}
 	});
 
-	if(Args.Benchmark)
-		MP.Benchmark();
 	IOC.run();
 
-	spdlog::get("MiniPlex")->info("Joining threads.");
+	spdlog::get("ProtoConv")->info("Joining threads.");
 	for(auto& t : threads)
 		t.join();
 
-	spdlog::get("MiniPlex")->info("Shutdown cleanly: return 0.");
+	spdlog::get("ProtoConv")->info("Shutdown cleanly: return 0.");
 	spdlog::shutdown();
 	return 0;
 }
 catch(const std::exception& e)
 {
-	if(auto log = spdlog::get("MiniPlex"))
+	if(auto log = spdlog::get("ProtoConv"))
 		log->critical("Exception: '{}'",e.what());
 	else
 		std::cerr<<"Exception: '"<<e.what()<<"'"<<std::endl;
@@ -77,3 +75,4 @@ catch(const std::exception& e)
 	return 1;
 }
 }
+
