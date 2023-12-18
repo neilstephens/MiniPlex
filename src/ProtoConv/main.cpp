@@ -19,6 +19,8 @@
 #include "LogSetup.h"
 #include "ProtoConv.h"
 #include <asio.hpp>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <spdlog/spdlog.h>
 #include <vector>
 #include <thread>

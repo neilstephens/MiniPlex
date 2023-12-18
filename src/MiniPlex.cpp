@@ -18,6 +18,8 @@
 #include "MiniPlex.h"
 #include "CmdArgs.h"
 #include <asio.hpp>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <spdlog/spdlog.h>
 #include <memory>
 #include <csignal>
