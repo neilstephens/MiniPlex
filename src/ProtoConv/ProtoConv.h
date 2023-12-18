@@ -24,6 +24,8 @@
 #include <atomic>
 #include <memory>
 
+typedef asio::basic_streambuf<std::allocator<char>> buf_t;
+
 struct CmdArgs;
 
 class ProtoConv

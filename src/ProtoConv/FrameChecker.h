@@ -17,11 +17,17 @@
 #ifndef FRAMECHECKER_H
 #define FRAMECHECKER_H
 
+#include <asio.hpp>
+
+typedef asio::basic_streambuf<std::allocator<char>> buf_t;
 
 class FrameChecker
 {
 public:
 	FrameChecker();
+	~FrameChecker();
+
+	virtual uint32_t CheckFrame(const buf_t& readbuf) = 0;
 };
 
 #endif // FRAMECHECKER_H

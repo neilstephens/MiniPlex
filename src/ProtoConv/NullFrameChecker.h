@@ -1,6 +1,9 @@
-/*	MiniPlex
+/*	opendatacon
  *
- *	Copyright (c) 2023: Neil Stephens
+ *	Copyright (c) 2014:
+ *
+ *		DCrip3fJguWgVCLrZFfA7sIGgvx1Ou3fHfCxnrz4svAi
+ *		yxeOtDhDCXf1Z4ApgXvX5ahqQmzRfJ2DoX8S05SqHA==
  *
  *	Licensed under the Apache License, Version 2.0 (the "License");
  *	you may not use this file except in compliance with the License.
@@ -14,14 +17,22 @@
  *	See the License for the specific language governing permissions and
  *	limitations under the License.
  */
+/*
+ * NullFrameChecker.h
+ *
+ *  Created on: 18/12/2023
+ *      Author: Neil Stephens
+ */
+#ifndef NULLFRAMECHECKER_H
+#define NULLFRAMECHECKER_H
+
 #include "FrameChecker.h"
 
-FrameChecker::FrameChecker()
+class NullFrameChecker : public FrameChecker
 {
+public:
+	NullFrameChecker();
+	uint32_t CheckFrame(const buf_t& readbuf) override;
+};
 
-}
-
-FrameChecker::~FrameChecker()
-{
-
-}
+#endif // NULLFRAMECHECKER_H

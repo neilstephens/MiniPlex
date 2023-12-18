@@ -18,6 +18,7 @@
 #include "ProtoConv.h"
 #include "CmdArgs.h"
 #include <asio.hpp>
+#include <sys/stat.h>
 #include <spdlog/spdlog.h>
 #include <memory>
 #include <csignal>
