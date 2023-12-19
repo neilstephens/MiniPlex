@@ -25,3 +25,7 @@ TCPStreamHandler::~TCPStreamHandler()
 {
 
 }
+
+void TCPStreamHandler::Write(std::shared_ptr<uint8_t> data, size_t n)
+{
+}

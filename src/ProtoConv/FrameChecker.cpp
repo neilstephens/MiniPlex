@@ -20,8 +20,3 @@ FrameChecker::FrameChecker()
 {
 
 }
-
-FrameChecker::~FrameChecker()
-{
-
-}

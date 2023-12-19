@@ -24,6 +24,8 @@ class TCPStreamHandler : public StreamHandler
 public:
 	TCPStreamHandler();
 	~TCPStreamHandler();
+
+	void Write(std::shared_ptr<uint8_t> data, size_t n) override;
 };
 
 #endif // TCPSTREAMHANDLER_H

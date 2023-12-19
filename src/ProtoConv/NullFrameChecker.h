@@ -32,7 +32,7 @@ class NullFrameChecker : public FrameChecker
 {
 public:
 	NullFrameChecker();
-	uint32_t CheckFrame(const buf_t& readbuf) override;
+	size_t CheckFrame(const buf_t& readbuf) override;
 };
 
 #endif // NULLFRAMECHECKER_H

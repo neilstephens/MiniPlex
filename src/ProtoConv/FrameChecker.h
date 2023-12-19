@@ -25,9 +25,9 @@ class FrameChecker
 {
 public:
 	FrameChecker();
-	~FrameChecker();
+	virtual ~FrameChecker() = default;
 
-	virtual uint32_t CheckFrame(const buf_t& readbuf) = 0;
+	virtual size_t CheckFrame(const buf_t& readbuf) = 0;
 };
 
 #endif // FRAMECHECKER_H

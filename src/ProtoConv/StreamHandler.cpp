@@ -20,8 +20,3 @@ StreamHandler::StreamHandler()
 {
 
 }
-
-StreamHandler::~StreamHandler()
-{
-
-}

@@ -17,6 +17,7 @@
 
 #include "ProtoConv.h"
 #include "CmdArgs.h"
+#include "TCPStreamHandler.h"
 #include <asio.hpp>
 #include <spdlog/spdlog.h>
 #include <memory>
@@ -32,6 +33,7 @@ ProtoConv::ProtoConv(const CmdArgs& Args, asio::io_context& IOC):
 	{
 		spdlog::get("ProtoConv")->info("Operating in TCP mode to {}:{}",Args.TCPAddr.getValue(),Args.TCPPort.getValue());
 		//TODO: setup tcp stream
+		pStream = std::make_shared<TCPStreamHandler>();
 	}
 	else if(Args.SerialDevice.getValue() != "")
 	{

@@ -30,7 +30,7 @@ NullFrameChecker::NullFrameChecker()
 
 }
 
-uint32_t NullFrameChecker::CheckFrame(const buf_t& readbuf)
+size_t NullFrameChecker::CheckFrame(const buf_t& readbuf)
 {
 	//Don't check anything. Everything is a valid 'frame'.
 	return readbuf.size();
