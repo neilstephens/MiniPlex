@@ -14,18 +14,31 @@
  *	See the License for the specific language governing permissions and
  *	limitations under the License.
  */
-#include "SerialStreamHandler.h"
-#include <spdlog/spdlog.h>
+#ifndef SERIALPORTSMANAGER_H
+#define SERIALPORTSMANAGER_H
+
 #include <asio.hpp>
 #include <vector>
 #include <string>
+#include <functional>
 
-SerialStreamHandler::SerialStreamHandler(std::shared_ptr<SerialPortsManager> pSerialMan):
-	pSerialMan(pSerialMan)
-{
-}
+using buf_t = asio::basic_streambuf<std::allocator<char>>;
 
-void SerialStreamHandler::Write(std::vector<uint8_t>&& data)
+class SerialPortsManager
 {
-	pSerialMan->Write(std::move(data));
-}
+public:
+	SerialPortsManager(asio::io_context& IOC, const std::vector<std::string>& devs, const std::function<void(buf_t& readbuf)>& read_handler);
+	~SerialPortsManager();
+	void Write(std::vector<uint8_t>&& data);
+
+private:
+	asio::io_context& IOC;
+	std::vector<asio::serial_port> ports;
+	std::vector<asio::serial_port>::iterator port_it;
+	std::vector<buf_t> bufs;
+	const std::function<void(buf_t& readbuf)>& ReadHandler;
+
+	void Read(buf_t& buf);
+};
+
+#endif // SERIALPORTSMANAGER_H

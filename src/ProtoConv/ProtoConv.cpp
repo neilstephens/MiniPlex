@@ -18,6 +18,7 @@
 #include "ProtoConv.h"
 #include "CmdArgs.h"
 #include "SerialStreamHandler.h"
+#include "SerialPortsManager.h"
 #include "TCPStreamHandler.h"
 #include "TCPSocketManager.h"
 #include "NullFrameChecker.h"
@@ -50,15 +51,15 @@ ProtoConv::ProtoConv(const CmdArgs& Args, asio::io_context& IOC):
 		auto prt = std::to_string(Args.TCPPort.getValue());
 		auto srv = !Args.TCPisClient.getValue();
 		spdlog::get("ProtoConv")->info("Operating in TCP {} mode {}:{}",srv?"Server":"Client",ip,prt);
+		//TODO: hook the pSockMan logging
 		auto pSockMan = std::make_shared<TCPSocketManager>(IOC,srv,ip,prt,[this](buf_t& buf){RcvStreamHandler(buf);},[](bool){},1000,true);
 		pStream = std::make_shared<TCPStreamHandler>(pSockMan);
 	}
 	else if(!Args.SerialDevices.getValue().empty())
 	{
 		spdlog::get("ProtoConv")->info("Operating in Serial mode on {} devices",Args.SerialDevices.getValue().size());
-		//TODO: set up serial stream
-
-		pStream = std::make_shared<SerialStreamHandler>();
+		auto pSerialMan =  std::make_shared<SerialPortsManager>(IOC,Args.SerialDevices.getValue(),[this](buf_t& buf){RcvStreamHandler(buf);});
+		pStream = std::make_shared<SerialStreamHandler>(pSerialMan);
 	}
 
 	RcvUDP();

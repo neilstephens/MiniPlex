@@ -18,14 +18,17 @@
 #define SERIALSTREAMHANDLER_H
 
 #include "StreamHandler.h"
+#include "SerialPortsManager.h"
+#include <memory>
 
 class SerialStreamHandler : public StreamHandler
 {
 public:
-	SerialStreamHandler();
-	~SerialStreamHandler() override;
-
+	SerialStreamHandler(std::shared_ptr<SerialPortsManager> pSerialMan);
 	void Write(std::vector<uint8_t>&& data) override;
+
+private:
+	std::shared_ptr<SerialPortsManager> pSerialMan;
 };
 
 #endif // SERIALSTREAMHANDLER_H
