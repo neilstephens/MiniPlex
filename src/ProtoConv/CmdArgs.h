@@ -32,9 +32,9 @@ struct CmdArgs
 		RemoteAddr("A", "remoteaddr", "Remote ip address for datagrams.", true, "", "remote addr"),
 		RemotePort("r", "remoteport", "Remote port for datagrams.", true, 0, "remote port"),
 		TCPAddr("T", "tcphost", "If converting TCP, this is the remote IP address for the connection.", false, "", "remote tcp host"),
-		LocalTCPAddr("L", "localtcp", "If converting TCP, local ip address to use. Defaults to 0.0.0.0 for all ipv4 interfaces.", false, "0.0.0.0", "local tcp addr"),
+		TCPisClient("C","tcpisclient", "If converting TCP, this is defines if it's a client or server connection.", false, true, "tcp is client"),
 		TCPPort("t", "tcpport", "TCP port if converting TCP.", false, 0, "remote tcp port"),
-		SerialDevice("s", "serialdevice", "Device if converting serial.", false, "", "serial device"),
+		SerialDevices("s", "serialdevices", "List of serial devices, if converting serial", false, "serial devices"),
 		FrameProtocol("p", "frameprotocol", "Parse stream frames based on this protocol", false, "DNP3", "frame protocol"),
 		ConsoleLevel("c", "console_logging", "Console log level: off, critical, error, warn, info, debug, or trace. Default off.", false, "off", "console log level"),
 		FileLevel("f", "file_logging", "File log level: off, critical, error, warn, info, debug, or trace. Default error.", false, "error", "file log level"),
@@ -50,8 +50,9 @@ struct CmdArgs
 		cmd.add(FileLevel);
 		cmd.add(ConsoleLevel);
 		cmd.add(FrameProtocol);
-		cmd.add(SerialDevice);
+		cmd.add(SerialDevices);
 		cmd.add(TCPPort);
+		cmd.add(TCPisClient);
 		cmd.add(TCPAddr);
 		cmd.add(RemotePort);
 		cmd.add(RemoteAddr);
@@ -59,18 +60,14 @@ struct CmdArgs
 		cmd.add(LocalPort);
 		cmd.parse(argc, argv);
 
-		if(TCPAddr.getValue() != "" && SerialDevice.getValue() != "")
-			throw std::invalid_argument("Choose TCP Address or Serial Device, not both");
+		if(TCPAddr.getValue() != "" && !SerialDevices.getValue().empty())
+			throw std::invalid_argument("Choose TCP Address or Serial Devices, not both");
 
-		if(TCPAddr.getValue() == "" && SerialDevice.getValue() == "")
-			throw std::invalid_argument("Provide TCP Address or Serial Device");
+		if(TCPAddr.getValue() == "" && SerialDevices.getValue().empty())
+			throw std::invalid_argument("Provide TCP Address or Serial Devices");
 
 		asio::error_code err;
 		asio::ip::address::from_string(LocalAddr.getValue(),err);
-		if(err)
-			throw std::invalid_argument("Invalid Local IP address: "+LocalAddr.getValue());
-
-		asio::ip::address::from_string(LocalTCPAddr.getValue(),err);
 		if(err)
 			throw std::invalid_argument("Invalid Local IP address: "+LocalAddr.getValue());
 
@@ -91,9 +88,9 @@ struct CmdArgs
 	TCLAP::ValueArg<std::string> RemoteAddr;
 	TCLAP::ValueArg<uint16_t> RemotePort;
 	TCLAP::ValueArg<std::string> TCPAddr;
-	TCLAP::ValueArg<std::string> LocalTCPAddr;
+	TCLAP::ValueArg<bool> TCPisClient;
 	TCLAP::ValueArg<uint16_t> TCPPort;
-	TCLAP::ValueArg<std::string> SerialDevice;
+	TCLAP::MultiArg<std::string> SerialDevices;
 	TCLAP::ValueArg<std::string> FrameProtocol;
 	TCLAP::ValueArg<std::string> ConsoleLevel;
 	TCLAP::ValueArg<std::string> FileLevel;

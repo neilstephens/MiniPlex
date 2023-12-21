@@ -18,10 +18,15 @@
 
 SerialStreamHandler::SerialStreamHandler()
 {
-
+	//TODO: open serial devs?
 }
 
 SerialStreamHandler::~SerialStreamHandler()
 {
+	//TODO: close serial devs?
+}
 
+void SerialStreamHandler::Write(std::vector<uint8_t>&& data)
+{
+	//TODO: write the data
 }

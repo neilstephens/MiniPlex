@@ -22,7 +22,7 @@
 class DNP3FrameChecker : public FrameChecker
 {
 public:
-	DNP3FrameChecker();
+	size_t CheckFrame(const buf_t& readbuf) override;
 };
 
 #endif // DNP3FRAMECHECKER_H

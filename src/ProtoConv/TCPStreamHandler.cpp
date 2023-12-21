@@ -15,17 +15,22 @@
  *	limitations under the License.
  */
 #include "TCPStreamHandler.h"
+#include "TCPSocketManager.h"
+#include <vector>
+#include <memory>
 
-TCPStreamHandler::TCPStreamHandler()
+TCPStreamHandler::TCPStreamHandler(std::shared_ptr<TCPSocketManager> pSockMan):
+	pSockMan(pSockMan)
 {
-
+	this->pSockMan->Open();
 }
 
 TCPStreamHandler::~TCPStreamHandler()
 {
-
+	pSockMan->Close();
 }
 
-void TCPStreamHandler::Write(std::shared_ptr<uint8_t> data, size_t n)
+void TCPStreamHandler::Write(std::vector<uint8_t>&& data)
 {
+	pSockMan->Write(std::move(data));
 }

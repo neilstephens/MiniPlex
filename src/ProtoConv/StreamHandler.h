@@ -17,7 +17,8 @@
 #ifndef STREAMHANDLER_H
 #define STREAMHANDLER_H
 
-#include <memory>
+#include <vector>
+#include <cstdint>
 
 class StreamHandler
 {
@@ -25,7 +26,7 @@ public:
 	StreamHandler();
 	virtual ~StreamHandler() = default;
 
-	virtual void Write(std::shared_ptr<uint8_t> data, size_t n) = 0;
+	virtual void Write(std::vector<uint8_t>&& data) = 0;
 };
 
 #endif // STREAMHANDLER_H

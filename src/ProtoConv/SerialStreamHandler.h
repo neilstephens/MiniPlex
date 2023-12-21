@@ -23,7 +23,9 @@ class SerialStreamHandler : public StreamHandler
 {
 public:
 	SerialStreamHandler();
-	~SerialStreamHandler();
+	~SerialStreamHandler() override;
+
+	void Write(std::vector<uint8_t>&& data) override;
 };
 
 #endif // SERIALSTREAMHANDLER_H

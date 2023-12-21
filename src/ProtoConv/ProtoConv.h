@@ -37,6 +37,7 @@ private:
 
 	void RcvUDP();
 	void RcvUDPHandler(const asio::error_code err, const size_t n);
+	void RcvStreamHandler(buf_t& buf);
 
 	const CmdArgs& Args;
 	asio::io_context& IOC;

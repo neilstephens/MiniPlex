@@ -18,14 +18,21 @@
 #define TCPSTREAMHANDLER_H
 
 #include "StreamHandler.h"
+#include <vector>
+#include <memory>
+
+class TCPSocketManager;
 
 class TCPStreamHandler : public StreamHandler
 {
 public:
-	TCPStreamHandler();
-	~TCPStreamHandler();
+	TCPStreamHandler(std::shared_ptr<TCPSocketManager> pSockMan);
+	~TCPStreamHandler() override;
 
-	void Write(std::shared_ptr<uint8_t> data, size_t n) override;
+	void Write(std::vector<uint8_t>&& data) override;
+
+private:
+	std::shared_ptr<TCPSocketManager> pSockMan;
 };
 
 #endif // TCPSTREAMHANDLER_H
