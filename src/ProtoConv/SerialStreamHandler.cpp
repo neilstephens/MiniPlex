@@ -23,6 +23,12 @@
 SerialStreamHandler::SerialStreamHandler(std::shared_ptr<SerialPortsManager> pSerialMan):
 	pSerialMan(pSerialMan)
 {
+	this->pSerialMan->Start();
+}
+
+SerialStreamHandler::~SerialStreamHandler()
+{
+	pSerialMan->Stop();
 }
 
 void SerialStreamHandler::Write(std::vector<uint8_t>&& data)

@@ -17,57 +17,91 @@
 #include "SerialPortsManager.h"
 #include <spdlog/spdlog.h>
 
-//TODO: add port options etc.
+//TODO: add port options etc. Use handler tracker
 SerialPortsManager::SerialPortsManager(asio::io_context& IOC, const std::vector<std::string>& devs, const std::function<void(buf_t&)>& read_handler):
 	IOC(IOC),
+	handler_tracker(std::make_shared<char>()),
+	port_write_idx(0),
+	num_ports(devs.size()),
+	bufs(devs.size()),
 	ReadHandler(read_handler)
 {
 	for(auto& dev : devs)
 	{
 		ports.emplace_back(IOC);
 		ports.back().open(dev);
-		bufs.emplace_back();
-		Read(bufs.back());
+		strands.emplace_back(IOC);
 	}
-	port_it = ports.begin();
+}
+
+void SerialPortsManager::Start()
+{
+	size_t i = 0;
+	for(auto& port : ports)
+	{
+		//TODO: add these to args
+		port.set_option(asio::serial_port::baud_rate(9600));
+		port.set_option(asio::serial_port::character_size(8));
+		port.set_option(asio::serial_port::flow_control(asio::serial_port::flow_control::none));
+		port.set_option(asio::serial_port::parity(asio::serial_port::parity::none));
+		port.set_option(asio::serial_port::stop_bits(asio::serial_port::stop_bits::one));
+
+		auto& strand = strands.at(i);
+		auto& buf = bufs.at(i);
+		strand.post([this,&strand,&port,&buf]()
+		{
+			Read(strand,port,buf);
+		});
+		i++;
+	}
+}
+
+void SerialPortsManager::Stop()
+{
+	for(auto& port : ports)
+	{
+		asio::error_code err;
+		port.close(err);
+		if(err)
+			spdlog::get("ProtoConv")->error("Close serial port error '{}'.",err.message());
+	}
 }
 
 SerialPortsManager::~SerialPortsManager()
 {
-	//TODO: cancel and wait for outstanding handlers
-	for(auto& port : ports)
-		port.close();
+	//TODO: wait for outstanding handlers
 }
 
-void SerialPortsManager::Read(buf_t& buf)
+void SerialPortsManager::Read(asio::io_context::strand& strand, asio::serial_port& port, buf_t& buf)
 {
-	//TODO: use a strand wrapped handler
-	asio::async_read(ports.back(),buf.prepare(65536), asio::transfer_at_least(1), [this,&buf](asio::error_code err, size_t n)
+	asio::async_read(port,buf.prepare(65536), asio::transfer_at_least(1), strand.wrap([this,&buf,&port,&strand](asio::error_code err, size_t n)
 	{
 		if(err)
 			spdlog::get("ProtoConv")->error("Read {} bytes from serial, return error '{}'.",n,err.message());
 		else
 		{
+			buf.commit(n);
 			ReadHandler(buf);
-			Read(buf);
+			Read(strand,port,buf);
 		}
-	});
+	}));
 }
 
 void SerialPortsManager::Write(std::vector<uint8_t>&& data)
 {
+	auto idx = port_write_idx++ % num_ports;
+	auto& port = ports[idx];
+	auto& strand = strands[idx];
 	auto pBuf = std::make_shared<std::vector<uint8_t>>(std::move(data));
 
-	//TODO: use a strand wrapped handler
-	asio::async_write(*port_it,asio::buffer(pBuf->data(),pBuf->size()),asio::transfer_all(),[pBuf](asio::error_code err, size_t n)
+	strand.post([pBuf,&port]()
 	{
-		if(err)
-			spdlog::get("ProtoConv")->error("Wrote {} bytes to serial, return error '{}'.",n,err.message());
-		else
-			spdlog::get("ProtoConv")->trace("Wrote {} bytes to serial.",n);
+		asio::async_write(port,asio::buffer(pBuf->data(),pBuf->size()),asio::transfer_all(),[pBuf](asio::error_code err, size_t n)
+		{
+			if(err)
+				spdlog::get("ProtoConv")->error("Wrote {} bytes to serial, return error '{}'.",n,err.message());
+			else
+				spdlog::get("ProtoConv")->trace("Wrote {} bytes to serial.",n);
+		});
 	});
-
-	port_it++;
-	if(port_it == ports.end())
-		port_it = ports.begin();
 }

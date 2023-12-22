@@ -25,6 +25,7 @@ class SerialStreamHandler : public StreamHandler
 {
 public:
 	SerialStreamHandler(std::shared_ptr<SerialPortsManager> pSerialMan);
+	~SerialStreamHandler() override;
 	void Write(std::vector<uint8_t>&& data) override;
 
 private:

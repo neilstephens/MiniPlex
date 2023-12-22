@@ -21,6 +21,7 @@
 #include <vector>
 #include <string>
 #include <functional>
+#include <atomic>
 
 using buf_t = asio::basic_streambuf<std::allocator<char>>;
 
@@ -30,15 +31,20 @@ public:
 	SerialPortsManager(asio::io_context& IOC, const std::vector<std::string>& devs, const std::function<void(buf_t& readbuf)>& read_handler);
 	~SerialPortsManager();
 	void Write(std::vector<uint8_t>&& data);
+	void Start();
+	void Stop();
 
 private:
 	asio::io_context& IOC;
+	std::vector<asio::io_context::strand> strands;
+	std::shared_ptr<void> handler_tracker;
 	std::vector<asio::serial_port> ports;
-	std::vector<asio::serial_port>::iterator port_it;
+	std::atomic_size_t port_write_idx;
+	const size_t num_ports;
 	std::vector<buf_t> bufs;
-	const std::function<void(buf_t& readbuf)>& ReadHandler;
+	const std::function<void(buf_t& readbuf)> ReadHandler;
 
-	void Read(buf_t& buf);
+	void Read(asio::io_context::strand& strand, asio::serial_port& port, buf_t& buf);
 };
 
 #endif // SERIALPORTSMANAGER_H
