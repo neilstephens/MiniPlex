@@ -85,7 +85,7 @@ inline std::pair<bool,uint8_t> CRCCheck(const buf_t& readbuf, size_t start_offse
 
 	for(auto byte_it = buf_begin; byte_it != buf_end; byte_it++)
 	{
-		auto& byte = *byte_it;
+		const uint8_t& byte = *byte_it;
 
 		if(i < start_offset)
 		{

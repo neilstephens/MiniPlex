@@ -17,7 +17,7 @@
 #include "SerialPortsManager.h"
 #include <spdlog/spdlog.h>
 
-//TODO: add port options etc. Use handler tracker
+//TODO: Use handler tracker
 SerialPortsManager::SerialPortsManager(asio::io_context& IOC, const std::vector<std::string>& devs, const std::function<void(buf_t&)>& read_handler):
 	IOC(IOC),
 	handler_tracker(std::make_shared<char>()),
@@ -39,7 +39,7 @@ void SerialPortsManager::Start()
 	size_t i = 0;
 	for(auto& port : ports)
 	{
-		//TODO: add these to args
+		//TODO: add serial port settings to args
 		port.set_option(asio::serial_port::baud_rate(9600));
 		port.set_option(asio::serial_port::character_size(8));
 		port.set_option(asio::serial_port::flow_control(asio::serial_port::flow_control::none));
