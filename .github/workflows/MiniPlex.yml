@@ -125,14 +125,14 @@ jobs:
         
       - name: Zip Exes
         run: |
-          find -name "MiniPlex_*_exe" | xargs -I{} zip -r {}.zip {}
+          find -name "MiniPlex_*_exe" | xargs -I{} zip -r {}_${{ github.ref_name }}.zip {}
         
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           draft: false
           files: |
-            *_exe.zip
+            *_exe_${{ github.ref_name }}.zip
           fail_on_unmatched_files: false
           token: ${{ secrets.GITHUB_TOKEN }}
 
