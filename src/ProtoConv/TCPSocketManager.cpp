@@ -15,6 +15,9 @@
  *	limitations under the License.
  */
 
+//Whole class taken almost verbatim from opendatacon
+//	See NOTICES file for full attribution
+
 #include "TCPSocketManager.h"
 #include "Platform.h"
 #include <asio.hpp>
