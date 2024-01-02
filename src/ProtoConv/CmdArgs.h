@@ -35,12 +35,16 @@ struct CmdArgs
 		TCPisClient("C","tcpisclient", "If converting TCP, this is defines if it's a client or server connection.", false, true, "tcp is client"),
 		TCPPort("t", "tcpport", "TCP port if converting TCP.", false, 0, "remote tcp port"),
 		SerialDevices("s", "serialdevices", "List of serial devices, if converting serial", false, "serial devices"),
+		SerialBaudRates("b", "serialbauds", "List of serial board rates, if converting serial", false, "serial bauds rates"),
+		SerialFlowControls("L", "serialflowctl", "List of serial flow control settings, if converting serial", false, "serial flow ctl settings"),
+		SerialCharSizes("Z", "serialcharsize", "List of serial char sizes, if converting serial", false, "serial char sizes"),
+		SerialStopBits("i", "serialstopbits", "List of serial stop bits settings, if converting serial", false, "serial stop bits"),
 		FrameProtocol("p", "frameprotocol", "Parse stream frames based on this protocol", false, "DNP3", "frame protocol"),
 		ConsoleLevel("c", "console_logging", "Console log level: off, critical, error, warn, info, debug, or trace. Default off.", false, "off", "console log level"),
 		FileLevel("f", "file_logging", "File log level: off, critical, error, warn, info, debug, or trace. Default error.", false, "error", "file log level"),
 		LogFile("F", "log_file", "Log filename. Defaults to ./ProtoConv.log", false, "ProtoConv.log", "log filename"),
-		LogSize("S", "log_size", "Roll the log file at this many kB. Defaults to 5000", false, 5000, "size in kB"),
-		LogNum("N", "log_num", "Keep this many log files when rolling the log. Defaults to 3", false, 3, "number of files"),
+		LogSize("S", "log_size", "Roll the log file at this many kB. Defaults to 5000", false, 5000, "log file size in kB"),
+		LogNum("N", "log_num", "Keep this many log files when rolling the log. Defaults to 3", false, 3, "number of log files"),
 		ConcurrencyHint("x", "concurrency", "A hint for the number of threads in thread pool. Defaults to detected hardware concurrency.",false,std::thread::hardware_concurrency(),"numthreads")
 	{
 		cmd.add(ConcurrencyHint);
@@ -50,6 +54,10 @@ struct CmdArgs
 		cmd.add(FileLevel);
 		cmd.add(ConsoleLevel);
 		cmd.add(FrameProtocol);
+		cmd.add(SerialStopBits);
+		cmd.add(SerialCharSizes);
+		cmd.add(SerialFlowControls);
+		cmd.add(SerialBaudRates);
 		cmd.add(SerialDevices);
 		cmd.add(TCPPort);
 		cmd.add(TCPisClient);
@@ -91,6 +99,10 @@ struct CmdArgs
 	TCLAP::ValueArg<bool> TCPisClient;
 	TCLAP::ValueArg<uint16_t> TCPPort;
 	TCLAP::MultiArg<std::string> SerialDevices;
+	TCLAP::MultiArg<size_t> SerialBaudRates;
+	TCLAP::MultiArg<std::string> SerialFlowControls;
+	TCLAP::MultiArg<size_t> SerialCharSizes;
+	TCLAP::MultiArg<std::string> SerialStopBits;
 	TCLAP::ValueArg<std::string> FrameProtocol;
 	TCLAP::ValueArg<std::string> ConsoleLevel;
 	TCLAP::ValueArg<std::string> FileLevel;

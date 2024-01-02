@@ -25,6 +25,15 @@
 
 using buf_t = asio::basic_streambuf<std::allocator<char>>;
 
+struct SerialDeviceSettings
+{
+	asio::serial_port::baud_rate baud_rate = asio::serial_port::baud_rate(115200);
+	asio::serial_port::character_size character_size = asio::serial_port::character_size(8);
+	asio::serial_port::flow_control flow_control;
+	asio::serial_port::parity parity;
+	asio::serial_port::stop_bits stop_bits;
+};
+
 class SerialPortsManager
 {
 public:
@@ -34,10 +43,17 @@ public:
 	void Start();
 	void Stop();
 
+	void SetBaudRate(const std::vector<size_t>& BRs);
+	void SetCharSize(const std::vector<size_t>& CSs);
+	void SetFlowControl(const std::vector<std::string>& FCs);
+	void SetParity(const std::vector<std::string>& Ps);
+	void SetStopBits(const std::vector<std::string>& SBs);
+
 private:
 	asio::io_context& IOC;
 	std::vector<asio::io_context::strand> strands;
 	std::shared_ptr<void> handler_tracker;
+	std::vector<SerialDeviceSettings> port_settings;
 	std::vector<asio::serial_port> ports;
 	std::atomic_size_t port_write_idx;
 	const size_t num_ports;

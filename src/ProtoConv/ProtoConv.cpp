@@ -59,6 +59,16 @@ ProtoConv::ProtoConv(const CmdArgs& Args, asio::io_context& IOC):
 	{
 		spdlog::get("ProtoConv")->info("Operating in Serial mode on {} devices",Args.SerialDevices.getValue().size());
 		auto pSerialMan =  std::make_shared<SerialPortsManager>(IOC,Args.SerialDevices.getValue(),[this](buf_t& buf){RcvStreamHandler(buf);});
+
+		if(!Args.SerialBaudRates.getValue().empty())
+			pSerialMan->SetBaudRate(Args.SerialBaudRates.getValue());
+		if(!Args.SerialCharSizes.getValue().empty())
+			pSerialMan->SetCharSize(Args.SerialCharSizes.getValue());
+		if(!Args.SerialFlowControls.getValue().empty())
+			pSerialMan->SetFlowControl(Args.SerialFlowControls.getValue());
+		if(!Args.SerialStopBits.getValue().empty())
+			pSerialMan->SetStopBits(Args.SerialStopBits.getValue());
+
 		pStream = std::make_shared<SerialStreamHandler>(pSerialMan);
 	}
 
