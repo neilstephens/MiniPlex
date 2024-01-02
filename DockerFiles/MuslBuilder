@@ -11,5 +11,5 @@ RUN git -C MiniPlex checkout $BUILD_COMMIT && \
 	mkdir MiniPlex-bin && \
 	cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_FLAGS=-static -S MiniPlex -B MiniPlex-bin && \
 	cmake --build MiniPlex-bin --parallel 8 && \
-	strip $STRIP_OPTION MiniPlex-bin/MiniPlex
+	strip $STRIP_OPTION MiniPlex-bin/MiniPlex && \
 	strip $STRIP_OPTION MiniPlex-bin/ProtoConv
