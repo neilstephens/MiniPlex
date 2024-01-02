@@ -1,4 +1,13 @@
-# MiniPlex version 0.2.2
+# MiniPlex version 0.3.2
+
+## 0.3.2
+  * Release notes update
+
+## 0.3.1
+  * Github release files with versions in name
+
+## 0.3.0
+  * ProtoConv: Additional utility to convert between streams and datagrams
 
 ## 0.2.2
   * Proper static binaries for Linux
