@@ -10,6 +10,7 @@ if(NOT WIN32)
 endif()
 
 project(MiniPlex LANGUAGES CXX)
+add_definitions(-DMP_VERSION="0.3.0")
 
 file(GLOB ${PROJECT_NAME}_SRC src/*.cpp src/*.h)
 
@@ -83,7 +84,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/src/subm
 target_link_libraries(${PROJECT_NAME} ${LIBCXX})
 set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ".")
-
 
 file(GLOB ProtoConv_SRC src/ProtoConv/*.cpp src/ProtoConv/*.h)
 add_executable(ProtoConv ${ProtoConv_SRC})
