@@ -26,7 +26,7 @@
 struct CmdArgs
 {
 	CmdArgs(int argc, char* argv[]):
-		cmd("Protocol adapter to convert between a stream and datagrams",' ',MP_VERSION),
+		cmd("Protocol adapter to convert between a stream and datagrams.",' ',MP_VERSION),
 		LocalAddr("a", "localaddr", "Local ip address for datagrams. Defaults to 0.0.0.0 for all ipv4 interfaces.", false, "0.0.0.0", "local addr"),
 		LocalPort("l", "localport", "Local port to listen/receive datagrams on.", true, 0, "local port"),
 		RemoteAddr("A", "remoteaddr", "Remote ip address for datagrams.", true, "", "remote addr"),

@@ -4,6 +4,11 @@
 ## Synopsis
 ```
 
+MiniPlex: A minimal UDP multiplexer/hub/broker.
+ProtoConv: Protocol adapter to convert between a stream and datagrams.
+
+		In combination, a simple way to bolt-on rudimentary multi-cast/multi-path or combine connections for existing applications
+
 USAGE: 
 
    ./MiniPlex  {-H|-T|-P} -p <port> [-l <localaddr>] [-o <timeout>] [-r
@@ -89,8 +94,97 @@ Where:
      Displays usage information and exits.
 
 
-   A minimal UDP/TCP multiplexer/hub/broker. A simple way to bolt-on
-   rudimentary multi-cast/multi-path or combine connections.
+=================================================================================
+
+
+   ./ProtoConv  -l <local port> [-a <local addr>] -A <remote addr> -r
+                <remote port> [-T <remote tcp host>] [-C <tcp is client>]
+                [-t <remote tcp port>] [-s <serial devices>] ... [-b
+                <serial bauds rates>] ... [-L <serial flow ctl settings>]
+                ... [-Z <serial char sizes>] ... [-i <serial stop bits>]
+                ... [-p <frame protocol>] [-c <console log level>] [-f
+                <file log level>] [-F <log filename>] [-S <log file size in
+                kB>] [-N <number of log files>] [-x <numthreads>] [--]
+                [--version] [-h]
+
+
+Where: 
+
+   -l <local port>,  --localport <local port>
+     (required)  Local port to listen/receive datagrams on.
+
+   -a <local addr>,  --localaddr <local addr>
+     Local ip address for datagrams. Defaults to 0.0.0.0 for all ipv4
+     interfaces.
+
+   -A <remote addr>,  --remoteaddr <remote addr>
+     (required)  Remote ip address for datagrams.
+
+   -r <remote port>,  --remoteport <remote port>
+     (required)  Remote port for datagrams.
+
+   -T <remote tcp host>,  --tcphost <remote tcp host>
+     If converting TCP, this is the remote IP address for the connection.
+
+   -C <tcp is client>,  --tcpisclient <tcp is client>
+     If converting TCP, this is defines if it's a client or server
+     connection.
+
+   -t <remote tcp port>,  --tcpport <remote tcp port>
+     TCP port if converting TCP.
+
+   -s <serial devices>,  --serialdevices <serial devices>  (accepted
+      multiple times)
+     List of serial devices, if converting serial
+
+   -b <serial bauds rates>,  --serialbauds <serial bauds rates>  (accepted
+      multiple times)
+     List of serial board rates, if converting serial
+
+   -L <serial flow ctl settings>,  --serialflowctl <serial flow ctl
+      settings>  (accepted multiple times)
+     List of serial flow control settings, if converting serial
+
+   -Z <serial char sizes>,  --serialcharsize <serial char sizes>  (accepted
+      multiple times)
+     List of serial char sizes, if converting serial
+
+   -i <serial stop bits>,  --serialstopbits <serial stop bits>  (accepted
+      multiple times)
+     List of serial stop bits settings, if converting serial
+
+   -p <frame protocol>,  --frameprotocol <frame protocol>
+     Parse stream frames based on this protocol
+
+   -c <console log level>,  --console_logging <console log level>
+     Console log level: off, critical, error, warn, info, debug, or trace.
+     Default off.
+
+   -f <file log level>,  --file_logging <file log level>
+     File log level: off, critical, error, warn, info, debug, or trace.
+     Default error.
+
+   -F <log filename>,  --log_file <log filename>
+     Log filename. Defaults to ./ProtoConv.log
+
+   -S <log file size in kB>,  --log_size <log file size in kB>
+     Roll the log file at this many kB. Defaults to 5000
+
+   -N <number of log files>,  --log_num <number of log files>
+     Keep this many log files when rolling the log. Defaults to 3
+
+   -x <numthreads>,  --concurrency <numthreads>
+     A hint for the number of threads in thread pool. Defaults to detected
+     hardware concurrency.
+
+   --,  --ignore_rest
+     Ignores the rest of the labeled arguments following this flag.
+
+   --version
+     Displays version information and exits.
+
+   -h,  --help
+     Displays usage information and exits.
    
 ```
 

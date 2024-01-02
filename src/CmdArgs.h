@@ -26,7 +26,7 @@
 struct CmdArgs
 {
 	CmdArgs(int argc, char* argv[]):
-		cmd("A minimal UDP/TCP multiplexer/hub/broker. A simple way to bolt-on rudimentary multi-cast/multi-path or combine connections.",' ',MP_VERSION),
+		cmd("A minimal UDP multiplexer/hub/broker. A simple way to bolt-on rudimentary multi-cast/multi-path or combine connections.",' ',MP_VERSION),
 		Hub("H", "hub", "Hub/Star mode: Forward datagrams from/to all endpoints."),
 		Trunk("T", "trunk", "Trunk mode: Forward frames from a 'trunk' to other endpoints. Forward datagrams from other endpoints to the trunk."),
 		Prune("P", "prune", "Like Trunk mode, but limits flow to one (first in best dressed) branch"),
