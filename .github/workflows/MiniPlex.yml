@@ -50,6 +50,9 @@ jobs:
           ${{github.workspace}}/build/MiniPlex
           ${{github.workspace}}/build/**/MiniPlex.exe
           ${{github.workspace}}/build/**/MiniPlex.pdb
+          ${{github.workspace}}/build/ProtoConv
+          ${{github.workspace}}/build/**/ProtoConv.exe
+          ${{github.workspace}}/build/**/ProtoConv.pdb
           LICENSE
           NOTICE
           README.md
@@ -95,7 +98,7 @@ jobs:
     - name: Copy Exe
       run: |
         mkdir build
-        docker run -v $(pwd)/build:/build miniplex:latest cp MiniPlex-bin/MiniPlex /build/
+        docker run -v $(pwd)/build:/build miniplex:latest cp MiniPlex-bin/MiniPlex MiniPlex-bin/ProtoConv /build/
 
     - if: always()
       name: Upload Exes
@@ -105,6 +108,7 @@ jobs:
         retention-days: 7
         path: |
           ${{github.workspace}}/build/MiniPlex
+          ${{github.workspace}}/build/ProtoConv
           LICENSE
           NOTICE
           README.md
