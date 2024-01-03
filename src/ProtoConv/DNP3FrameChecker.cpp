@@ -24,28 +24,21 @@ inline size_t StartBytesOffset(const buf_t& readbuf)
 	auto buf_end = asio::buffers_end(readbuf.data());
 
 	size_t num_unframed_bytes = 0;
-	bool found_first = false; bool found_second = false;
+	uint8_t prev_byte = 0;
 
 	for(auto byte_it = buf_begin; byte_it != buf_end; byte_it++)
 	{
-		auto& byte = *byte_it;
+		const uint8_t& byte = *byte_it;
+		if(prev_byte == 0x05 && byte == 0x64)
+			break;
 
-		if(!found_first && byte == 0x05)
-			found_first = true;
-		else if(found_first)
-		{
-			if(byte == 0x64)
-			{
-				found_second = true;
-				break;
-			}
-			else
-				found_first = false;
-		}
 		num_unframed_bytes++;
+		prev_byte = byte;
 	}
-	if(found_second)
+
+	if(prev_byte == 0x05)
 		num_unframed_bytes--;
+
 	return num_unframed_bytes;
 }
 
