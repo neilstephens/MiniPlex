@@ -20,15 +20,15 @@
 
 inline size_t StartBytesOffset(const buf_t& readbuf)
 {
-	auto buf_begin = asio::buffers_begin(readbuf.data());
-	auto buf_end = asio::buffers_end(readbuf.data());
+	const auto buf_begin = asio::buffers_begin(readbuf.data());
+	const auto buf_end = asio::buffers_end(readbuf.data());
 
 	size_t num_unframed_bytes = 0;
 	uint8_t prev_byte = 0;
 
 	for(auto byte_it = buf_begin; byte_it != buf_end; byte_it++)
 	{
-		const uint8_t& byte = *byte_it;
+		const uint8_t byte = *byte_it;
 		if(prev_byte == 0x05 && byte == 0x64)
 			break;
 
@@ -51,7 +51,7 @@ inline std::pair<bool,uint8_t> CRCCheck(const buf_t& readbuf, size_t start_offse
 		return {false,0};
 	}
 
-	static unsigned short crcLookUpTable[256] = { /* table taken directly from IEEE 1815 Annex E */
+	static const unsigned short crcLookUpTable[256] = { /* table taken directly from IEEE 1815 Annex E */
 		0x0000, 0x365E, 0x6CBC, 0x5AE2, 0xD978, 0xEF26, 0xB5C4, 0x839A, 0xFF89, 0xC9D7, 0x9335, 0xA56B, 0x26F1, 0x10AF,
 		0x4A4D, 0x7C13, 0xB26B, 0x8435, 0xDED7, 0xE889, 0x6B13, 0x5D4D, 0x07AF, 0x31F1, 0x4DE2, 0x7BBC, 0x215E, 0x1700,
 		0x949A, 0xA2C4, 0xF826, 0xCE78, 0x29AF, 0x1FF1, 0x4513, 0x734D, 0xF0D7, 0xC689, 0x9C6B, 0xAA35, 0xD626, 0xE078,
@@ -76,12 +76,12 @@ inline std::pair<bool,uint8_t> CRCCheck(const buf_t& readbuf, size_t start_offse
 	uint16_t crc = 0;
 	size_t i = 0;
 
-	auto buf_begin = asio::buffers_begin(readbuf.data());
-	auto buf_end = asio::buffers_end(readbuf.data());
+	const auto buf_begin = asio::buffers_begin(readbuf.data());
+	const auto buf_end = asio::buffers_end(readbuf.data());
 
 	for(auto byte_it = buf_begin; byte_it != buf_end; byte_it++)
 	{
-		const uint8_t& byte = *byte_it;
+		const uint8_t byte = *byte_it;
 
 		if(i < start_offset)
 		{
@@ -92,7 +92,7 @@ inline std::pair<bool,uint8_t> CRCCheck(const buf_t& readbuf, size_t start_offse
 		if(i < start_offset+n)
 		{
 			//compute crc
-			uint8_t index = (crc ^ byte) & 0xFF;
+			const uint8_t index = (crc ^ byte) & 0xFF;
 			crc = crcLookUpTable[index] ^ (crc >> 8);
 			if(i == return_offset)
 				return_byte = byte;
@@ -137,6 +137,9 @@ inline size_t CRCCheckedLength(const buf_t& readbuf)
 
 size_t DNP3FrameChecker::CheckFrame(const buf_t& readbuf)
 {
+	if(readbuf.size() < 1)
+		return 0;
+
 	size_t length = 0;
 	//parse datalink header
 	if(auto num_unframed_bytes = StartBytesOffset(readbuf))
@@ -168,6 +171,11 @@ size_t DNP3FrameChecker::CheckFrame(const buf_t& readbuf)
 		// but don't have the whole frame yet
 		spdlog::get("ProtoConv")->trace("DNP3FrameChecker::CheckFrame(): Valid header, waiting for full frame.");
 		return 0;
+	}
+	else if(length == 10)
+	{
+		spdlog::get("ProtoConv")->trace("DNP3FrameChecker::CheckFrame(): Valid header-only frame.");
+		return length;
 	}
 	else
 	{
