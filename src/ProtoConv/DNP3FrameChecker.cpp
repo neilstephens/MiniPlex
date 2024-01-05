@@ -46,7 +46,10 @@ inline size_t StartBytesOffset(const buf_t& readbuf)
 inline std::pair<bool,uint8_t> CRCCheck(const buf_t& readbuf, size_t start_offset, size_t n, size_t return_offset = 0)
 {
 	if(readbuf.size() < start_offset+n)
+	{
+		spdlog::get("ProtoConv")->error("DNP3FrameChecker::CRCCheck(): insufficient buffer length to check CRC.");
 		return {false,0};
+	}
 
 	static unsigned short crcLookUpTable[256] = { /* table taken directly from IEEE 1815 Annex E */
 		0x0000, 0x365E, 0x6CBC, 0x5AE2, 0xD978, 0xEF26, 0xB5C4, 0x839A, 0xFF89, 0xC9D7, 0x9335, 0xA56B, 0x26F1, 0x10AF,
@@ -98,9 +101,15 @@ inline std::pair<bool,uint8_t> CRCCheck(const buf_t& readbuf, size_t start_offse
 		}
 		//check crc
 		else if(i == start_offset+n && byte != (crc&0xFF))
+		{
+			spdlog::get("ProtoConv")->warn("DNP3FrameChecker::CRCCheck(): Lower byte (0x{:02x}) check failed against calculated CRC (0x{:04x}).",byte,crc);
 			return {false,0};
+		}
 		else if(i == start_offset+n+1 && byte != (crc>>8))
+		{
+			spdlog::get("ProtoConv")->warn("DNP3FrameChecker::CRCCheck(): Upper byte (0x{:02x}) check failed against calculated CRC (0x{:04x}).",byte,crc);
 			return {false,0};
+		}
 		else if(i == start_offset+n+2)
 			break;
 
@@ -166,11 +175,18 @@ size_t DNP3FrameChecker::CheckFrame(const buf_t& readbuf)
 		//check all the block CRCs
 		bool GoodCRCs;
 		size_t start_offset = 10;
+		const uint8_t tx_ctl_byte = *(asio::buffers_begin(readbuf.data())+start_offset);
+		const bool tx_fin = tx_ctl_byte & 0x80;
+		const bool tx_fir = tx_ctl_byte & 0x40;
+		const uint8_t tx_seq = tx_ctl_byte & 0x3F;
 		do
 		{
 			auto n = (length-start_offset >= 18) ? 16 : length-start_offset-2;
 			GoodCRCs = CRCCheck(readbuf,start_offset,n).first;
-			spdlog::get("ProtoConv")->trace("DNP3FrameChecker::CheckFrame(): {} block.",GoodCRCs?"Valid":"Invalid");
+			if(GoodCRCs)
+				spdlog::get("ProtoConv")->trace("DNP3FrameChecker::CheckFrame(): Block at offset {} valid.",start_offset);
+			else
+				spdlog::get("ProtoConv")->warn("DNP3FrameChecker::CheckFrame(): Corrupt block at offset {}.",start_offset);
 			start_offset += 18;
 		}while(GoodCRCs && start_offset < length);
 
@@ -181,10 +197,9 @@ size_t DNP3FrameChecker::CheckFrame(const buf_t& readbuf)
 		}
 		else
 		{
-			spdlog::get("ProtoConv")->warn("DNP3FrameChecker::CheckFrame(): Corrupt frame.");
-			//CRC failed - treat as un-framed
-			//	return header and move on
-			return 10;
+			spdlog::get("ProtoConv")->warn("DNP3FrameChecker::CheckFrame(): Corrupt frame: Transport function (FIR: {}, FIN: {}, SEQ: {})",tx_fir,tx_fin,tx_seq);
+			//CRC failed - count all the CRC checked bytes
+			return start_offset - 18;
 		}
 	}
 }
