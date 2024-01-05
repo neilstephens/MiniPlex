@@ -22,6 +22,7 @@
 #include <string>
 #include <functional>
 #include <atomic>
+#include <deque>
 
 using buf_t = asio::basic_streambuf<std::allocator<char>>;
 
@@ -55,12 +56,15 @@ private:
 	std::shared_ptr<void> handler_tracker;
 	std::vector<SerialDeviceSettings> port_settings;
 	std::vector<asio::serial_port> ports;
-	std::atomic_size_t port_write_idx;
+	std::deque<size_t> idle_port_idx_q;
+	std::deque<std::shared_ptr<std::vector<uint8_t>>> write_q;
+	asio::io_context::strand write_q_strand;
 	const size_t num_ports;
 	std::vector<buf_t> bufs;
 	const std::function<void(buf_t& readbuf)> ReadHandler;
 
 	void Read(asio::io_context::strand& strand, asio::serial_port& port, buf_t& buf);
+	void Write(std::shared_ptr<std::vector<uint8_t>> pBuf, std::shared_ptr<void> tracker);
 };
 
 #endif // SERIALPORTSMANAGER_H

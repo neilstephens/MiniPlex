@@ -21,16 +21,18 @@ SerialPortsManager::SerialPortsManager(asio::io_context& IOC, const std::vector<
 	IOC(IOC),
 	handler_tracker(std::make_shared<char>()),
 	port_settings(devs.size()),
-	port_write_idx(0),
+	write_q_strand(IOC),
 	num_ports(devs.size()),
 	bufs(devs.size()),
 	ReadHandler(read_handler)
 {
+	size_t i = 0;
 	for(auto& dev : devs)
 	{
 		ports.emplace_back(IOC);
 		ports.back().open(dev);
 		strands.emplace_back(IOC);
+		idle_port_idx_q.push_back(i++);
 	}
 }
 
@@ -189,19 +191,41 @@ void SerialPortsManager::Read(asio::io_context::strand& strand, asio::serial_por
 
 void SerialPortsManager::Write(std::vector<uint8_t>&& data)
 {
-	auto idx = port_write_idx++ % num_ports;
-	auto& port = ports[idx];
-	auto& strand = strands[idx];
 	auto pBuf = std::make_shared<std::vector<uint8_t>>(std::move(data));
+	Write(pBuf, handler_tracker);
+}
 
-	strand.post([pBuf,&port,tracker{handler_tracker}]()
+void SerialPortsManager::Write(std::shared_ptr<std::vector<uint8_t>> pBuf, std::shared_ptr<void> tracker)
+{
+	write_q_strand.post([this,pBuf,tracker]()
 	{
-		asio::async_write(port,asio::buffer(pBuf->data(),pBuf->size()),asio::transfer_all(),[pBuf,tracker](asio::error_code err, size_t n)
+		if(idle_port_idx_q.empty())
+			write_q.push_back(pBuf);
+		else
 		{
-			if(err)
-				spdlog::get("ProtoConv")->error("Wrote {} bytes to serial, return error '{}'.",n,err.message());
-			else
-				spdlog::get("ProtoConv")->trace("Wrote {} bytes to serial.",n);
-		});
+			auto idx = idle_port_idx_q.front();
+			idle_port_idx_q.pop_front();
+			auto& port = ports[idx];
+			auto& strand = strands[idx];
+
+			strand.post([this,pBuf,&port,idx,tracker]()
+			{
+				asio::async_write(port,asio::buffer(pBuf->data(),pBuf->size()),asio::transfer_all(),write_q_strand.wrap([this,idx,tracker](asio::error_code err, size_t n)
+				{
+					if(err)
+						spdlog::get("ProtoConv")->error("Wrote {} bytes to serial, return error '{}'.",n,err.message());
+					else
+						spdlog::get("ProtoConv")->trace("Wrote {} bytes to serial.",n);
+
+					idle_port_idx_q.push_back(idx);
+					if(!write_q.empty())
+					{
+						auto pBuf = write_q.front();
+						write_q.pop_front();
+						Write(pBuf,tracker);
+					}
+				}));
+			});
+		}
 	});
 }
