@@ -192,40 +192,40 @@ void SerialPortsManager::Read(asio::io_context::strand& strand, asio::serial_por
 void SerialPortsManager::Write(std::vector<uint8_t>&& data)
 {
 	auto pBuf = std::make_shared<std::vector<uint8_t>>(std::move(data));
-	Write(pBuf, handler_tracker);
-}
-
-void SerialPortsManager::Write(std::shared_ptr<std::vector<uint8_t>> pBuf, std::shared_ptr<void> tracker)
-{
-	write_q_strand.post([this,pBuf,tracker]()
+	write_q_strand.post([this,pBuf,tracker{handler_tracker}]()
 	{
-		if(idle_port_idx_q.empty())
-			write_q.push_back(pBuf);
-		else
+		if(!idle_port_idx_q.empty())
 		{
 			auto idx = idle_port_idx_q.front();
 			idle_port_idx_q.pop_front();
-			auto& port = ports[idx];
-			auto& strand = strands[idx];
-
-			strand.post([this,pBuf,&port,idx,tracker]()
-			{
-				asio::async_write(port,asio::buffer(pBuf->data(),pBuf->size()),asio::transfer_all(),write_q_strand.wrap([this,idx,tracker](asio::error_code err, size_t n)
-				{
-					if(err)
-						spdlog::get("ProtoConv")->error("Wrote {} bytes to serial, return error '{}'.",n,err.message());
-					else
-						spdlog::get("ProtoConv")->trace("Wrote {} bytes to serial.",n);
-
-					idle_port_idx_q.push_back(idx);
-					if(!write_q.empty())
-					{
-						auto pBuf = write_q.front();
-						write_q.pop_front();
-						Write(pBuf,tracker);
-					}
-				}));
-			});
+			Write(pBuf, idx, tracker);
 		}
+		else
+			write_q.push_back(pBuf);
+	});
+}
+
+void SerialPortsManager::Write(std::shared_ptr<std::vector<uint8_t>> pBuf, const size_t idx, std::shared_ptr<void> tracker)
+{
+	auto& strand = strands[idx];
+	strand.post([this,pBuf,idx,tracker]()
+	{
+		auto& port = ports[idx];
+		asio::async_write(port,asio::buffer(pBuf->data(),pBuf->size()),asio::transfer_all(),write_q_strand.wrap([this,idx,tracker](asio::error_code err, size_t n)
+		{
+			if(err)
+				spdlog::get("ProtoConv")->error("Wrote {} bytes to serial, return error '{}'.",n,err.message());
+			else
+				spdlog::get("ProtoConv")->trace("Wrote {} bytes to serial.",n);
+
+			if(!write_q.empty())
+			{
+				auto pBuf = write_q.front();
+				write_q.pop_front();
+				Write(pBuf,idx,tracker);
+			}
+			else
+				idle_port_idx_q.push_back(idx);
+		}));
 	});
 }
