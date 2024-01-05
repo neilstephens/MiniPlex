@@ -43,7 +43,7 @@ inline size_t StartBytesOffset(const buf_t& readbuf)
 }
 
 //returns if the checksum is valid, and if so, the byte at the requested offset
-inline std::pair<bool,uint8_t> CRCCheck(const buf_t& readbuf, size_t start_offset, size_t n, size_t return_offset = 0)
+inline std::pair<bool,uint8_t> CRCCheck(const buf_t& readbuf, const size_t start_offset, const size_t n, const size_t return_offset = 0)
 {
 	if(readbuf.size() < start_offset+n)
 	{
@@ -102,12 +102,12 @@ inline std::pair<bool,uint8_t> CRCCheck(const buf_t& readbuf, size_t start_offse
 		//check crc
 		else if(i == start_offset+n && byte != (crc&0xFF))
 		{
-			spdlog::get("ProtoConv")->warn("DNP3FrameChecker::CRCCheck(): Lower byte (0x{:02x}) check failed against calculated CRC (0x{:04x}).",byte,crc);
+			spdlog::get("ProtoConv")->warn("DNP3FrameChecker::CRCCheck(buf,{},{},{}): Lower byte (0x{:02x}) check failed against calculated CRC (0x{:04x}).",start_offset,n,return_offset,byte,crc);
 			return {false,0};
 		}
 		else if(i == start_offset+n+1 && byte != (crc>>8))
 		{
-			spdlog::get("ProtoConv")->warn("DNP3FrameChecker::CRCCheck(): Upper byte (0x{:02x}) check failed against calculated CRC (0x{:04x}).",byte,crc);
+			spdlog::get("ProtoConv")->warn("DNP3FrameChecker::CRCCheck(buf,{},{},{}): Upper byte (0x{:02x}) check failed against calculated CRC (0x{:04x}).",start_offset,n,return_offset,byte,crc);
 			return {false,0};
 		}
 		else if(i == start_offset+n+2)
