@@ -45,7 +45,7 @@ inline size_t StartBytesOffset(const buf_t& readbuf)
 //returns if the checksum is valid, and if so, the byte at the requested offset
 inline std::pair<bool,uint8_t> CRCCheck(const buf_t& readbuf, const size_t start_offset, const size_t n, const size_t return_offset = 0)
 {
-	if(readbuf.size() < start_offset+n)
+	if(readbuf.size() < start_offset+n+2)
 	{
 		spdlog::get("ProtoConv")->error("DNP3FrameChecker::CRCCheck(): insufficient buffer length to check CRC.");
 		return {false,0};
@@ -79,39 +79,34 @@ inline std::pair<bool,uint8_t> CRCCheck(const buf_t& readbuf, const size_t start
 	const auto buf_begin = asio::buffers_begin(readbuf.data());
 	const auto buf_end = asio::buffers_end(readbuf.data());
 
-	for(auto byte_it = buf_begin; byte_it != buf_end; byte_it++)
+	for(auto byte_it = buf_begin+start_offset; byte_it != buf_end; byte_it++)
 	{
+		if(i > n+1)
+			break;
+
 		const uint8_t byte = *byte_it;
 
-		if(i < start_offset)
-		{
-			i++;
-			continue;
-		}
-
-		if(i < start_offset+n)
+		if(i < n)
 		{
 			//compute crc
 			const uint8_t index = (crc ^ byte) & 0xFF;
 			crc = crcLookUpTable[index] ^ (crc >> 8);
-			if(i == return_offset)
+			if(i == return_offset-start_offset)
 				return_byte = byte;
-			if(i == start_offset+n-1)
+			if(i == n-1)
 				crc = ~crc;
 		}
 		//check crc
-		else if(i == start_offset+n && byte != (crc&0xFF))
+		else if(i == n && byte != (crc&0xFF))
 		{
 			spdlog::get("ProtoConv")->warn("DNP3FrameChecker::CRCCheck(buf,{},{},{}): Lower byte (0x{:02x}) check failed against calculated CRC (0x{:04x}).",start_offset,n,return_offset,byte,crc);
 			return {false,0};
 		}
-		else if(i == start_offset+n+1 && byte != (crc>>8))
+		else if(i == n+1 && byte != (crc>>8))
 		{
 			spdlog::get("ProtoConv")->warn("DNP3FrameChecker::CRCCheck(buf,{},{},{}): Upper byte (0x{:02x}) check failed against calculated CRC (0x{:04x}).",start_offset,n,return_offset,byte,crc);
 			return {false,0};
 		}
-		else if(i == start_offset+n+2)
-			break;
 
 		i++;
 	}
@@ -133,6 +128,19 @@ inline size_t CRCCheckedLength(const buf_t& readbuf)
 		2*(user_data/16) +		//crc bytes for whole blocks
 		((user_data%16) ? 2 : 0)	//crc bytes of any partial block
 	);
+}
+
+//buf2hex taken from opendatacon util.cpp
+constexpr char hexnibble[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+std::string buf2hex(const uint8_t* data, size_t size)
+{
+	std::string str(size*2,'.');
+	for (size_t i = 0; i < size; i++)
+	{
+		str[2*i] = hexnibble[(data[i] & 0xF0) >> 4];
+		str[2*i+1] = hexnibble[data[i] & 0x0F];
+	}
+	return str;
 }
 
 size_t DNP3FrameChecker::CheckFrame(const buf_t& readbuf)
@@ -194,7 +202,12 @@ size_t DNP3FrameChecker::CheckFrame(const buf_t& readbuf)
 			if(GoodCRCs)
 				spdlog::get("ProtoConv")->trace("DNP3FrameChecker::CheckFrame(): Block at offset {} valid.",start_offset);
 			else
+			{
 				spdlog::get("ProtoConv")->warn("DNP3FrameChecker::CheckFrame(): Corrupt block at offset {}.",start_offset);
+				uint8_t data[18];
+				std::copy(asio::buffers_begin(readbuf.data())+start_offset,asio::buffers_begin(readbuf.data())+start_offset+n+2,data);
+				spdlog::get("ProtoConv")->debug("DNP3FrameChecker::CheckFrame(): Corrupt block data: '{}'",buf2hex(data,n+2));
+			}
 			start_offset += 18;
 		}while(GoodCRCs && start_offset < length);
 
