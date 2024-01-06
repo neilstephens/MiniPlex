@@ -33,7 +33,8 @@ ProtoConv::ProtoConv(const CmdArgs& Args, asio::io_context& IOC):
 	IOC(IOC),
 	local_ep(asio::ip::address::from_string(Args.LocalAddr.getValue()),Args.LocalPort.getValue()),
 	remote_ep(asio::ip::address::from_string(Args.RemoteAddr.getValue()),Args.RemotePort.getValue()),
-	socket(IOC,local_ep)
+	socket(IOC,local_ep),
+	socket_strand(IOC)
 {
 	if(Args.FrameProtocol.getValue() == "DNP3")
 		pFramer = std::make_shared<DNP3FrameChecker>();
@@ -75,16 +76,16 @@ ProtoConv::ProtoConv(const CmdArgs& Args, asio::io_context& IOC):
 		pStream = std::make_shared<SerialStreamHandler>(pSerialMan);
 	}
 
-	RcvUDP();
+	socket_strand.post([this](){RcvUDP();});
 	spdlog::get("ProtoConv")->info("Listening for UDP on {}:{}",Args.LocalAddr.getValue(),Args.LocalPort.getValue());
 }
 
 void ProtoConv::RcvUDP()
 {
-	socket.async_receive(asio::buffer(rcv_buf.data(),rcv_buf.size()),[this](asio::error_code err, size_t n)
+	socket.async_receive(asio::buffer(rcv_buf.data(),rcv_buf.size()),socket_strand.wrap([this](asio::error_code err, size_t n)
 	{
 		RcvUDPHandler(err,n);
-	});
+	}));
 }
 
 void ProtoConv::RcvUDPHandler(const asio::error_code err, const size_t n)
@@ -116,7 +117,10 @@ void ProtoConv::RcvStreamHandler(buf_t& buf)
 		buf.sgetn(pForwardBuf.get(),frame_len);
 
 		spdlog::get("ProtoConv")->trace("RcvStreamHandler(): Forwarding frame length {} to UDP",frame_len);
-		socket.async_send_to(asio::buffer(pForwardBuf.get(),frame_len),remote_ep,[pForwardBuf](asio::error_code,size_t){});
+		socket_strand.post([this,pForwardBuf,frame_len]()
+		{
+			socket.async_send(asio::buffer(pForwardBuf.get(),frame_len),[pForwardBuf](asio::error_code,size_t){});
+		});
 	}
 }
 

@@ -48,6 +48,7 @@ private:
 	const asio::ip::udp::endpoint local_ep;
 	const asio::ip::udp::endpoint remote_ep;
 	asio::ip::udp::socket socket;
+	asio::io_context::strand socket_strand;
 
 	std::array<uint8_t, 64L * 1024> rcv_buf{};
 
