@@ -28,7 +28,7 @@ using buf_t = asio::basic_streambuf<std::allocator<char>>;
 
 struct SerialDeviceSettings
 {
-	asio::serial_port::baud_rate baud_rate = asio::serial_port::baud_rate(115200);
+	asio::serial_port::baud_rate baud_rate = asio::serial_port::baud_rate(38400);
 	asio::serial_port::character_size character_size = asio::serial_port::character_size(8);
 	asio::serial_port::flow_control flow_control;
 	asio::serial_port::parity parity;
