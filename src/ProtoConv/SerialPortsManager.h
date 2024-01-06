@@ -63,7 +63,7 @@ private:
 	std::vector<buf_t> bufs;
 	const std::function<void(buf_t& readbuf)> ReadHandler;
 
-	void Read(asio::io_context::strand& strand, asio::serial_port& port, buf_t& buf);
+	void Read(asio::io_context::strand& strand, asio::serial_port& port, buf_t& buf, std::shared_ptr<void> tracker);
 	void Write(std::shared_ptr<std::vector<uint8_t>> pBuf, const size_t idx, std::shared_ptr<void> tracker);
 };
 

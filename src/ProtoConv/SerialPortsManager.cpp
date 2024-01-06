@@ -51,7 +51,7 @@ void SerialPortsManager::Start()
 		auto& buf = bufs.at(i);
 		strand.post([this,&strand,&port,&buf,tracker{handler_tracker}]()
 		{
-			Read(strand,port,buf);
+			Read(strand,port,buf,tracker);
 		});
 		i++;
 	}
@@ -174,9 +174,9 @@ SerialPortsManager::~SerialPortsManager()
 		IOC.poll_one();
 }
 
-void SerialPortsManager::Read(asio::io_context::strand& strand, asio::serial_port& port, buf_t& buf)
+void SerialPortsManager::Read(asio::io_context::strand& strand, asio::serial_port& port, buf_t& buf, std::shared_ptr<void> tracker)
 {
-	asio::async_read(port,buf.prepare(65536), asio::transfer_at_least(1), strand.wrap([this,&buf,&port,&strand,tracker{handler_tracker}](asio::error_code err, size_t n)
+	asio::async_read(port,buf.prepare(65536), asio::transfer_at_least(1), strand.wrap([this,&buf,&port,&strand,tracker](asio::error_code err, size_t n)
 	{
 		if(err)
 			spdlog::get("ProtoConv")->error("Read {} bytes from serial, return error '{}'.",n,err.message());
@@ -184,7 +184,7 @@ void SerialPortsManager::Read(asio::io_context::strand& strand, asio::serial_por
 		{
 			buf.commit(n);
 			ReadHandler(buf);
-			Read(strand,port,buf);
+			Read(strand,port,buf,tracker);
 		}
 	}));
 }
