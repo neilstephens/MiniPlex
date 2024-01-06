@@ -129,6 +129,8 @@ void ProtoConv::RcvStreamHandler(buf_t& buf)
 		spdlog::get("ProtoConv")->trace("RcvStreamHandler(): Forwarding frame length {} to UDP",frame_len);
 		socket_strand.post([this,pForwardBuf,frame_len]()
 		{
+			//this is safe to call again before the handler is called - because it's non-composed
+			//	according to stackoverflow there is a queue for the file descriptor under-the-hood
 			socket.async_send(asio::buffer(pForwardBuf.get(),frame_len),[pForwardBuf](asio::error_code,size_t){});
 		});
 	}
