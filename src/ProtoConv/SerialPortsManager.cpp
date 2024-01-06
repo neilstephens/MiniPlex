@@ -201,7 +201,14 @@ void SerialPortsManager::Write(std::vector<uint8_t>&& data)
 			Write(pBuf, idx, tracker);
 		}
 		else
+		{
 			write_q.push_back(pBuf);
+			if(write_q.size() > 1000)//TODO: make variable limit
+			{
+				spdlog::get("ProtoConv")->error("Write queue overflow. Dropping oldest message.");
+				write_q.pop_front();
+			}
+		}
 	});
 }
 

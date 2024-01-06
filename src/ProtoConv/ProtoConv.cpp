@@ -110,11 +110,21 @@ void ProtoConv::RcvStreamHandler(buf_t& buf)
 	spdlog::get("ProtoConv")->trace("RcvStreamHandler(): {} bytes in buffer.",buf.size());
 	while(auto frame_len = pFramer->CheckFrame(buf))
 	{
+		if(frame_len > buf.size())
+		{
+			spdlog::get("ProtoConv")->error("RcvStreamHandler(): Frame checker claims frame size (), which is > size of buffer ().",frame_len,buf.size());
+			frame_len = buf.size();
+		}
 		// The C++20 way causes a malloc error when asio tries to copy a handler with this style shared_ptr
 		//auto pForwardBuf = std::make_shared<uint8_t[]>(n);
 		// Use the old way instead - only difference should be the control block is allocated separately
 		auto pForwardBuf = std::shared_ptr<char>(new char[frame_len],[](char* p){delete[] p;});
-		buf.sgetn(pForwardBuf.get(),frame_len);
+		const size_t ncopied = buf.sgetn(pForwardBuf.get(),frame_len);
+		if(ncopied != frame_len)
+		{
+			spdlog::get("ProtoConv")->warn("RcvStreamHandler(): Failed to copy whole frame to datagram buffer. Frame size {}, copied {}.",frame_len,ncopied);
+			frame_len = ncopied;
+		}
 
 		spdlog::get("ProtoConv")->trace("RcvStreamHandler(): Forwarding frame length {} to UDP",frame_len);
 		socket_strand.post([this,pForwardBuf,frame_len]()
