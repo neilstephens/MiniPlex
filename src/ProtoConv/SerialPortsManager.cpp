@@ -218,7 +218,7 @@ void SerialPortsManager::Write(std::shared_ptr<std::vector<uint8_t>> pBuf, const
 	strand.post([this,pBuf,idx,tracker]()
 	{
 		auto& port = ports[idx];
-		asio::async_write(port,asio::buffer(pBuf->data(),pBuf->size()),asio::transfer_all(),write_q_strand.wrap([this,idx,tracker](asio::error_code err, size_t n)
+		asio::async_write(port,asio::buffer(pBuf->data(),pBuf->size()),asio::transfer_all(),write_q_strand.wrap([this,idx,tracker,lifetime{pBuf}](asio::error_code err, size_t n)
 		{
 			if(err)
 				spdlog::get("ProtoConv")->error("Wrote {} bytes to serial, return error '{}'.",n,err.message());
