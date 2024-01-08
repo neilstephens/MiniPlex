@@ -23,6 +23,7 @@
 #include <asio.hpp>
 #include <atomic>
 #include <memory>
+#include <deque>
 
 typedef asio::basic_streambuf<std::allocator<char>> buf_t;
 
@@ -34,9 +35,10 @@ public:
 	ProtoConv(const CmdArgs& Args, asio::io_context &IOC);
 
 private:
+	using rbuf_t = std::array<uint8_t, 64L * 1024>;
 
 	void RcvUDP();
-	void RcvUDPHandler(const asio::error_code err, const size_t n);
+	void RcvUDPHandler(const asio::error_code err, const uint8_t* const buf, const size_t n);
 	void RcvStreamHandler(buf_t& buf);
 
 	const CmdArgs& Args;
@@ -49,8 +51,9 @@ private:
 	const asio::ip::udp::endpoint remote_ep;
 	asio::ip::udp::socket socket;
 	asio::io_context::strand socket_strand;
+	asio::io_context::strand process_strand;
 
-	std::array<uint8_t, 64L * 1024> rcv_buf{};
+	std::deque<std::shared_ptr<rbuf_t>> rcv_buf_q;
 
 	std::atomic_bool stopping = false;
 };

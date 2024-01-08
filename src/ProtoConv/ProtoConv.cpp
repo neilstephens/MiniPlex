@@ -34,7 +34,8 @@ ProtoConv::ProtoConv(const CmdArgs& Args, asio::io_context& IOC):
 	local_ep(asio::ip::address::from_string(Args.LocalAddr.getValue()),Args.LocalPort.getValue()),
 	remote_ep(asio::ip::address::from_string(Args.RemoteAddr.getValue()),Args.RemotePort.getValue()),
 	socket(IOC,local_ep),
-	socket_strand(IOC)
+	socket_strand(IOC),
+	process_strand(IOC)
 {
 	if(Args.FrameProtocol.getValue() == "DNP3")
 		pFramer = std::make_shared<DNP3FrameChecker>();
@@ -42,6 +43,10 @@ ProtoConv::ProtoConv(const CmdArgs& Args, asio::io_context& IOC):
 		pFramer = std::make_shared<NullFrameChecker>();
 	else
 		throw std::invalid_argument("Unknown frame protocol: "+Args.FrameProtocol.getValue());
+
+	//TODO: make this configurable
+	asio::socket_base::receive_buffer_size option(50000000);
+	socket.set_option(option);
 
 	socket.connect(remote_ep);
 	spdlog::get("ProtoConv")->info("Sending UDP to {}:{}",Args.RemoteAddr.getValue(),Args.RemotePort.getValue());
@@ -82,27 +87,40 @@ ProtoConv::ProtoConv(const CmdArgs& Args, asio::io_context& IOC):
 
 void ProtoConv::RcvUDP()
 {
-	socket.async_receive(asio::buffer(rcv_buf.data(),rcv_buf.size()),socket_strand.wrap([this](asio::error_code err, size_t n)
+	spdlog::get("ProtoConv")->trace("RcvUDP(): {} rcv buffers available.",rcv_buf_q.size());
+	if(rcv_buf_q.empty())
 	{
-		RcvUDPHandler(err,n);
+		spdlog::get("ProtoConv")->debug("RcvUDP(): Allocating another rcv buffer.");
+		rcv_buf_q.push_back(std::make_shared<rbuf_t>());
+	}
+
+	auto pBuf = rcv_buf_q.front();
+	rcv_buf_q.pop_front();
+
+	socket.async_receive(asio::buffer(pBuf->data(),pBuf->size()),socket_strand.wrap([this,pBuf](asio::error_code err, size_t n)
+	{
+		process_strand.post([this,err,pBuf,n]()
+		{
+			RcvUDPHandler(err,pBuf->data(),n);
+			socket_strand.post([this,pBuf]()
+			{
+				rcv_buf_q.push_back(pBuf);
+			});
+		});
+		RcvUDP();
 	}));
 }
 
-void ProtoConv::RcvUDPHandler(const asio::error_code err, const size_t n)
+void ProtoConv::RcvUDPHandler(const asio::error_code err, const uint8_t* const buf, const size_t n)
 {
 	if(err)
-	{
 		spdlog::get("ProtoConv")->error("RcvUDPHandler(): error code {}: '{}'",err.value(),err.message());
-		RcvUDP();
-		return;
-	}
-	spdlog::get("ProtoConv")->trace("RcvUDPHandler(): {} bytes.",n);
+	else
+		spdlog::get("ProtoConv")->trace("RcvUDPHandler(): {} bytes.",n);
 
 	std::vector<uint8_t> data(n);
-	memcpy(data.data(),rcv_buf.data(),n);
+	memcpy(data.data(),buf,n);
 	pStream->Write(std::move(data));
-
-	RcvUDP();
 }
 
 void ProtoConv::RcvStreamHandler(buf_t& buf)
