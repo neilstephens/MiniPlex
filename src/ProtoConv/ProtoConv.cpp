@@ -44,8 +44,7 @@ ProtoConv::ProtoConv(const CmdArgs& Args, asio::io_context& IOC):
 	else
 		throw std::invalid_argument("Unknown frame protocol: "+Args.FrameProtocol.getValue());
 
-	//TODO: make this configurable
-	asio::socket_base::receive_buffer_size option(50000000);
+	asio::socket_base::receive_buffer_size option(Args.SoRcvBuf.getValue());
 	socket.set_option(option);
 
 	socket.connect(remote_ep);

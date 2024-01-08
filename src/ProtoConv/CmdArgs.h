@@ -31,6 +31,7 @@ struct CmdArgs
 		LocalPort("l", "localport", "Local port to listen/receive datagrams on.", true, 0, "local port"),
 		RemoteAddr("A", "remoteaddr", "Remote ip address for datagrams.", true, "", "remote addr"),
 		RemotePort("r", "remoteport", "Remote port for datagrams.", true, 0, "remote port"),
+		SoRcvBuf("B", "so_rcvbuf", "Datagram socket receive buffer size.", false, 512L*1024, "rcv buf size"),
 		TCPAddr("T", "tcphost", "If converting TCP, this is the remote IP address for the connection.", false, "", "remote tcp host"),
 		TCPisClient("C","tcpisclient", "If converting TCP, this is defines if it's a client or server connection.", false, true, "tcp is client"),
 		TCPPort("t", "tcpport", "TCP port if converting TCP.", false, 0, "remote tcp port"),
@@ -62,6 +63,7 @@ struct CmdArgs
 		cmd.add(TCPPort);
 		cmd.add(TCPisClient);
 		cmd.add(TCPAddr);
+		cmd.add(SoRcvBuf);
 		cmd.add(RemotePort);
 		cmd.add(RemoteAddr);
 		cmd.add(LocalAddr);
@@ -95,6 +97,7 @@ struct CmdArgs
 	TCLAP::ValueArg<uint16_t> LocalPort;
 	TCLAP::ValueArg<std::string> RemoteAddr;
 	TCLAP::ValueArg<uint16_t> RemotePort;
+	TCLAP::ValueArg<size_t> SoRcvBuf;
 	TCLAP::ValueArg<std::string> TCPAddr;
 	TCLAP::ValueArg<bool> TCPisClient;
 	TCLAP::ValueArg<uint16_t> TCPPort;
