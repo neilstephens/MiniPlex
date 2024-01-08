@@ -27,8 +27,13 @@ MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 	IOC(IOC),
 	local_ep(asio::ip::address::from_string(Args.LocalAddr.getValue()),Args.LocalPort.getValue()),
 	socket(IOC,local_ep),
+	socket_strand(IOC),
+	process_strand(IOC),
 	EndPointCache(IOC,Args.CacheTimeout.getValue())
 {
+	asio::socket_base::receive_buffer_size option(Args.SoRcvBuf.getValue());
+	socket.set_option(option);
+
 	if(Args.Trunk || Args.Prune)
 	{
 		trunk = asio::ip::udp::endpoint(asio::ip::address::from_string(Args.TrunkAddr.getValue()),Args.TrunkPort.getValue());
@@ -43,27 +48,45 @@ MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 		auto branch = asio::ip::udp::endpoint(asio::ip::address::from_string(Args.BranchAddrs.getValue()[i]),Args.BranchPorts.getValue()[i]);
 		EndPointCache.Add(branch,[]{},true);
 	}
-	Rcv();
+	socket_strand.post([this](){Rcv();});
 	spdlog::get("MiniPlex")->info("Listening on {}:{}",Args.LocalAddr.getValue(),Args.LocalPort.getValue());
 }
 
 void MiniPlex::Rcv()
 {
-	socket.async_receive_from(asio::buffer(rcv_buf.data(),rcv_buf.size()),rcv_sender,[this](asio::error_code err, size_t n)
+	spdlog::get("MiniPlex")->trace("Rcv(): {} rcv buffers available.",rcv_buf_q.size());
+	if(rcv_buf_q.empty())
 	{
-		RcvHandler(err,n);
-	});
+		spdlog::get("MiniPlex")->debug("Rcv(): Allocating another rcv buffer.");
+		rcv_buf_q.push_back(std::make_shared<rbuf_t>());
+	}
+
+	auto pBuf = rcv_buf_q.front();
+	rcv_buf_q.pop_front();
+
+	auto pRcvSender = std::make_shared<asio::ip::udp::endpoint>();
+	socket.async_receive_from(asio::buffer(pBuf->data(),pBuf->size()),*pRcvSender,socket_strand.wrap([this,pBuf,pRcvSender](asio::error_code err, size_t n)
+	{
+		rx_count++;
+		process_strand.post([this,err,pBuf,pRcvSender,n]()
+		{
+			RcvHandler(err,pBuf->data(),*pRcvSender,n);
+			socket_strand.post([this,pBuf]()
+			{
+				rcv_buf_q.push_back(pBuf);
+			});
+		});
+		Rcv();
+	}));
 }
 
-void MiniPlex::RcvHandler(const asio::error_code err, const size_t n)
+void MiniPlex::RcvHandler(const asio::error_code err, const uint8_t* const buf, const asio::ip::udp::endpoint& rcv_sender, const size_t n)
 {
 	if(err)
 	{
 		spdlog::get("MiniPlex")->error("RcvHandler(): error code {}: '{}'",err.value(),err.message());
-		Rcv();
 		return;
 	}
-	rx_count++;
 
 	auto sender_string = rcv_sender.address().to_string()+":"+std::to_string(rcv_sender.port());
 	spdlog::get("MiniPlex")->trace("RcvHandler(): {} bytes from {}",n,sender_string);
@@ -73,7 +96,6 @@ void MiniPlex::RcvHandler(const asio::error_code err, const size_t n)
 	if(Args.Prune && rcv_sender != trunk && cache_EPs.size() && rcv_sender != cache_EPs[0])
 	{
 		spdlog::get("MiniPlex")->debug("RcvHandler(): pruned branch {}",sender_string);
-		Rcv();
 		return;
 	}
 
@@ -90,7 +112,7 @@ void MiniPlex::RcvHandler(const asio::error_code err, const size_t n)
 	//auto pForwardBuf = std::make_shared<uint8_t[]>(n);
 	// Use the old way instead - only difference should be the control block is allocated separately
 	auto pForwardBuf = std::shared_ptr<uint8_t>(new uint8_t[n],[](uint8_t* p){delete[] p;});
-	std::memcpy(pForwardBuf.get(),rcv_buf.data(),n);
+	std::memcpy(pForwardBuf.get(),buf,n);
 	if(Args.Hub || rcv_sender == trunk)
 	{
 		spdlog::get("MiniPlex")->trace("RcvHandler(): Forwarding to {} branches",cache_EPs.size());
@@ -103,8 +125,6 @@ void MiniPlex::RcvHandler(const asio::error_code err, const size_t n)
 		spdlog::get("MiniPlex")->trace("RcvHandler(): Forwarding to trunk");
 		socket.async_send_to(asio::buffer(pForwardBuf.get(),n),trunk,[pForwardBuf](asio::error_code,size_t){});
 	}
-
-	Rcv();
 }
 
 void MiniPlex::Benchmark()

@@ -22,6 +22,7 @@
 #include <asio.hpp>
 #include <string>
 #include <atomic>
+#include <deque>
 
 struct CmdArgs;
 
@@ -32,18 +33,22 @@ public:
 	void Benchmark();
 
 private:
+	using rbuf_t = std::array<uint8_t, 64L * 1024>;
+
 	void Rcv();
-	void RcvHandler(const asio::error_code err, const size_t n);
+	void RcvHandler(const asio::error_code err, const uint8_t* const buf, const asio::ip::udp::endpoint& rcv_sender, const size_t n);
 
 	const CmdArgs& Args;
 	asio::io_context& IOC;
 	const asio::ip::udp::endpoint local_ep;
 	asio::ip::udp::socket socket;
+	asio::io_context::strand socket_strand;
+	asio::io_context::strand process_strand;
 	TimeoutCache<asio::ip::udp::endpoint> EndPointCache;
 	asio::ip::udp::endpoint trunk;
 
-	std::array<uint8_t, 64L * 1024> rcv_buf{};
-	asio::ip::udp::endpoint rcv_sender;
+	std::deque<std::shared_ptr<rbuf_t>> rcv_buf_q;
+
 	std::atomic_bool stopping = false;
 
 	std::atomic<size_t> rx_count = 0;

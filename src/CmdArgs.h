@@ -32,6 +32,7 @@ struct CmdArgs
 		Prune("P", "prune", "Like Trunk mode, but limits flow to one (first in best dressed) branch"),
 		LocalAddr("l", "local", "Local ip address. Defaults to 0.0.0.0 for all ipv4 interfaces.", false, "0.0.0.0", "localaddr"),
 		LocalPort("p", "port", "Local port to listen/receive on.", true, 0, "port"),
+		SoRcvBuf("Z", "so_rcvbuf", "Datagram socket receive buffer size.", false, 512L*1024, "rcv buf size"),
 		CacheTimeout("o", "timeout", "Milliseconds to keep an idle endpoint cached",false,10000,"timeout"),
 		TrunkAddr("r", "trunk_ip", "Remote trunk ip address.", false, "", "trunkhost"),
 		TrunkPort("t", "trunk_port", "Remote trunk port.", false, 0, "trunkport"),
@@ -59,6 +60,7 @@ struct CmdArgs
 		cmd.add(TrunkPort);
 		cmd.add(TrunkAddr);
 		cmd.add(CacheTimeout);
+		cmd.add(SoRcvBuf);
 		cmd.add(LocalAddr);
 		cmd.add(LocalPort);
 		cmd.xorAdd({&Hub,&Trunk,&Prune});
@@ -94,6 +96,7 @@ struct CmdArgs
 	TCLAP::SwitchArg Prune;
 	TCLAP::ValueArg<std::string> LocalAddr;
 	TCLAP::ValueArg<uint16_t> LocalPort;
+	TCLAP::ValueArg<size_t> SoRcvBuf;
 	TCLAP::ValueArg<size_t> CacheTimeout;
 	TCLAP::ValueArg<std::string> TrunkAddr;
 	TCLAP::ValueArg<uint16_t> TrunkPort;
