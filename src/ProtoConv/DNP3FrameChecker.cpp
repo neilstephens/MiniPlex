@@ -143,17 +143,17 @@ std::string buf2hex(const uint8_t* data, size_t size)
 	return str;
 }
 
-size_t DNP3FrameChecker::CheckFrame(const buf_t& readbuf)
+Frame DNP3FrameChecker::CheckFrame(const buf_t& readbuf)
 {
 	if(readbuf.size() < 1)
-		return 0;
+		return Frame(0);
 
 	size_t length = 0;
 	//parse datalink header
 	if(auto num_unframed_bytes = StartBytesOffset(readbuf))
 	{
 		spdlog::get("ProtoConv")->warn("DNP3FrameChecker::CheckFrame(): {} unframed bytes.",num_unframed_bytes);
-		return num_unframed_bytes;
+		return Frame(num_unframed_bytes);
 	}
 
 	if(readbuf.size() >= 10)
@@ -164,13 +164,13 @@ size_t DNP3FrameChecker::CheckFrame(const buf_t& readbuf)
 			//CRC failed - not real start bytes
 			//	return them and move on
 			spdlog::get("ProtoConv")->warn("DNP3FrameChecker::CheckFrame(): false start bytes (header CRC failed).");
-			return 2;
+			return Frame(2);
 		}
 	}
 	else //found start bytes, but not enough data to check CRC
 	{
 		spdlog::get("ProtoConv")->trace("DNP3FrameChecker::CheckFrame(): Waiting for full header.");
-		return 0;
+		return Frame(0);
 	}
 
 	//we have a CRC verified header and know the full frame length
@@ -178,16 +178,17 @@ size_t DNP3FrameChecker::CheckFrame(const buf_t& readbuf)
 	{
 		// but don't have the whole frame yet
 		spdlog::get("ProtoConv")->trace("DNP3FrameChecker::CheckFrame(): Valid header, waiting for full frame.");
-		return 0;
-	}
-	else if(length == 10)
-	{
-		spdlog::get("ProtoConv")->trace("DNP3FrameChecker::CheckFrame(): Valid header-only frame.");
-		return length;
+		return Frame(0);
 	}
 	else
 	{
 		spdlog::get("ProtoConv")->trace("DNP3FrameChecker::CheckFrame(): Valid header, with full frame length.");
+		const uint32_t address_bytes = *(asio::buffers_begin(readbuf.data())+4);
+		if(length == 10)
+		{
+			spdlog::get("ProtoConv")->trace("DNP3FrameChecker::CheckFrame(): Header-only frame.");
+			return Frame(length,true,true,address_bytes);
+		}
 		//check all the block CRCs
 		bool GoodCRCs;
 		size_t start_offset = 10;
@@ -195,6 +196,7 @@ size_t DNP3FrameChecker::CheckFrame(const buf_t& readbuf)
 		const bool tx_fin = tx_ctl_byte & 0x80;
 		const bool tx_fir = tx_ctl_byte & 0x40;
 		const uint8_t tx_seq = tx_ctl_byte & 0x3F;
+		Frame frame(length,tx_fir,tx_fin,address_bytes,tx_seq);
 		do
 		{
 			auto n = (length-start_offset >= 18) ? 16 : length-start_offset-2;
@@ -214,13 +216,13 @@ size_t DNP3FrameChecker::CheckFrame(const buf_t& readbuf)
 		if(GoodCRCs)
 		{
 			spdlog::get("ProtoConv")->trace("DNP3FrameChecker::CheckFrame(): Full valid frame.");
-			return length;
+			return frame;
 		}
 		else
 		{
 			spdlog::get("ProtoConv")->warn("DNP3FrameChecker::CheckFrame(): Corrupt frame: Transport function (FIR: {}, FIN: {}, SEQ: {})",tx_fir,tx_fin,tx_seq);
 			//CRC failed - count all the CRC checked bytes
-			return start_offset - 18;
+			return Frame(start_offset - 18);
 		}
 	}
 }

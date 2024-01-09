@@ -20,6 +20,7 @@
 
 #include "FrameChecker.h"
 #include "StreamHandler.h"
+#include "FragHandler.h"
 #include <asio.hpp>
 #include <atomic>
 #include <memory>
@@ -40,11 +41,13 @@ private:
 	void RcvUDP();
 	void RcvUDPHandler(const asio::error_code err, const uint8_t* const buf, const size_t n);
 	void RcvStreamHandler(buf_t& buf);
+	void WriteHandler(std::shared_ptr<uint8_t> pBuf, const size_t sz);
 
 	const CmdArgs& Args;
 	asio::io_context& IOC;
 
 	std::shared_ptr<FrameChecker> pFramer;
+	std::shared_ptr<FragHandler> pFragHandler;
 	std::shared_ptr<StreamHandler> pStream;
 
 	const asio::ip::udp::endpoint local_ep;

@@ -23,10 +23,10 @@
 class NullFrameChecker : public FrameChecker
 {
 public:
-	inline size_t CheckFrame(const buf_t& readbuf) override
+	inline Frame CheckFrame(const buf_t& readbuf) override
 	{
 		//Don't check anything. Everything is a valid 'frame'.
-		return readbuf.size();
+		return Frame(readbuf.size());
 	}
 };
 

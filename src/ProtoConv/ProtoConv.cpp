@@ -23,6 +23,7 @@
 #include "TCPSocketManager.h"
 #include "NullFrameChecker.h"
 #include "DNP3FrameChecker.h"
+#include "NopFragHandler.h"
 #include <asio.hpp>
 #include <spdlog/spdlog.h>
 #include <memory>
@@ -37,10 +38,18 @@ ProtoConv::ProtoConv(const CmdArgs& Args, asio::io_context& IOC):
 	socket_strand(IOC),
 	process_strand(IOC)
 {
+	auto writer = [this](std::shared_ptr<uint8_t> pBuf, const size_t sz){WriteHandler(pBuf,sz);};
 	if(Args.FrameProtocol.getValue() == "DNP3")
+	{
 		pFramer = std::make_shared<DNP3FrameChecker>();
+		//TODO: use proper dnp3 frag handler
+		pFragHandler = std::make_shared<NopFragHandler>(writer);
+	}
 	else if(Args.FrameProtocol.getValue() == "Null")
+	{
 		pFramer = std::make_shared<NullFrameChecker>();
+		pFragHandler = std::make_shared<NopFragHandler>(writer);
+	}
 	else
 		throw std::invalid_argument("Unknown frame protocol: "+Args.FrameProtocol.getValue());
 
@@ -125,31 +134,37 @@ void ProtoConv::RcvUDPHandler(const asio::error_code err, const uint8_t* const b
 void ProtoConv::RcvStreamHandler(buf_t& buf)
 {
 	spdlog::get("ProtoConv")->trace("RcvStreamHandler(): {} bytes in buffer.",buf.size());
-	while(auto frame_len = pFramer->CheckFrame(buf))
+	while(auto frame = pFramer->CheckFrame(buf))
 	{
-		if(frame_len > buf.size())
+		if(frame.len > buf.size())
 		{
-			spdlog::get("ProtoConv")->error("RcvStreamHandler(): Frame checker claims frame size (), which is > size of buffer ().",frame_len,buf.size());
-			frame_len = buf.size();
+			spdlog::get("ProtoConv")->error("RcvStreamHandler(): Frame checker claims frame size (), which is > size of buffer ().",frame.len,buf.size());
+			frame.len = buf.size();
 		}
 		// The C++20 way causes a malloc error when asio tries to copy a handler with this style shared_ptr
 		//auto pForwardBuf = std::make_shared<uint8_t[]>(n);
 		// Use the old way instead - only difference should be the control block is allocated separately
-		auto pForwardBuf = std::shared_ptr<uint8_t>(new uint8_t[frame_len],[](uint8_t* p){delete[] p;});
-		const size_t ncopied = buf.sgetn(reinterpret_cast<char*>(pForwardBuf.get()),frame_len);
-		if(ncopied != frame_len)
+		auto pForwardBuf = std::shared_ptr<uint8_t>(new uint8_t[frame.len],[](uint8_t* p){delete[] p;});
+		const size_t ncopied = buf.sgetn(reinterpret_cast<char*>(pForwardBuf.get()),frame.len);
+		if(ncopied != frame.len)
 		{
-			spdlog::get("ProtoConv")->warn("RcvStreamHandler(): Failed to copy whole frame to datagram buffer. Frame size {}, copied {}.",frame_len,ncopied);
-			frame_len = ncopied;
+			spdlog::get("ProtoConv")->warn("RcvStreamHandler(): Failed to copy whole frame to datagram buffer. Frame size {}, copied {}.",frame.len,ncopied);
+			frame.len = ncopied;
 		}
 
-		spdlog::get("ProtoConv")->trace("RcvStreamHandler(): Forwarding frame length {} to UDP",frame_len);
-		socket_strand.post([this,pForwardBuf,frame_len]()
-		{
-			//this is safe to call again before the handler is called - because it's non-composed
-			//	according to stackoverflow there is a queue for the file descriptor under-the-hood
-			socket.async_send(asio::buffer(pForwardBuf.get(),frame_len),[pForwardBuf](asio::error_code,size_t){});
-		});
+		frame.pBuf = pForwardBuf;
+		pFragHandler->HandleFrame(frame);
 	}
+}
+
+void ProtoConv::WriteHandler(std::shared_ptr<uint8_t> pBuf, const size_t sz)
+{
+	socket_strand.post([this,pBuf,sz]()
+	{
+		spdlog::get("ProtoConv")->trace("WriteHandler(): Forwarding frame length {} to UDP",sz);
+		socket.async_send(asio::buffer(pBuf.get(),sz),[pBuf](asio::error_code,size_t){});
+		//this is safe to call again before the handler is called - because it's non-composed
+		//	according to stackoverflow there is a queue for the file descriptor under-the-hood
+	});
 }
 

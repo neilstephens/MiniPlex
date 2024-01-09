@@ -14,15 +14,22 @@
  *	See the License for the specific language governing permissions and
  *	limitations under the License.
  */
-#ifndef DNP3FRAMECHECKER_H
-#define DNP3FRAMECHECKER_H
+#ifndef FRAGHANDLER_H
+#define FRAGHANDLER_H
 
 #include "FrameChecker.h"
+#include <functional>
 
-class DNP3FrameChecker : public FrameChecker
+class FragHandler
 {
 public:
-	Frame CheckFrame(const buf_t& readbuf) override;
+	FragHandler(const std::function<void(std::shared_ptr<uint8_t> pBuf, const size_t sz)>& write_handler):
+		WriteHandler(write_handler)
+	{}
+	virtual ~FragHandler() = default;
+	virtual void HandleFrame(const Frame& frame) = 0;
+protected:
+	const std::function<void(std::shared_ptr<uint8_t> pBuf, const size_t sz)> WriteHandler;
 };
 
-#endif // DNP3FRAMECHECKER_H
+#endif // FRAGHANDLER_H

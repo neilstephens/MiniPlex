@@ -21,10 +21,33 @@
 
 using buf_t = asio::basic_streambuf<std::allocator<char>>;
 
+struct Frame
+{
+	explicit Frame(const size_t len,
+		const bool fir = true,
+		const bool fin = true,
+		const uint64_t flow = 0,
+		const size_t seq = 0):
+		len(len),
+		fir(fir),
+		fin(fin),
+		flow(flow),
+		seq(seq)
+	{}
+	bool isFragment() const { return !(fir && fin);}
+	operator bool() { return len == 0; };
+	std::shared_ptr<uint8_t> pBuf = nullptr;
+	size_t len;
+	const bool fir;
+	const bool fin;
+	const uint64_t flow;
+	const size_t seq;
+};
+
 struct FrameChecker
 {
 	virtual ~FrameChecker() = default;
-	virtual size_t CheckFrame(const buf_t& readbuf) = 0;
+	virtual Frame CheckFrame(const buf_t& readbuf) = 0;
 };
 
 #endif // FRAMECHECKER_H
