@@ -52,7 +52,7 @@ inline std::string GetHandlerID()
 	return std::to_string(thread_id)+":"+std::to_string(++thread_handler_id);
 }
 
-typedef asio::basic_streambuf<std::allocator<char>> buf_t;
+using buf_t = asio::basic_streambuf<std::allocator<char>>;
 
 //buffer to track a data container
 class shared_const_buffer: public asio::const_buffer

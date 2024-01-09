@@ -135,8 +135,8 @@ void ProtoConv::RcvStreamHandler(buf_t& buf)
 		// The C++20 way causes a malloc error when asio tries to copy a handler with this style shared_ptr
 		//auto pForwardBuf = std::make_shared<uint8_t[]>(n);
 		// Use the old way instead - only difference should be the control block is allocated separately
-		auto pForwardBuf = std::shared_ptr<char>(new char[frame_len],[](char* p){delete[] p;});
-		const size_t ncopied = buf.sgetn(pForwardBuf.get(),frame_len);
+		auto pForwardBuf = std::shared_ptr<uint8_t>(new uint8_t[frame_len],[](uint8_t* p){delete[] p;});
+		const size_t ncopied = buf.sgetn(reinterpret_cast<char*>(pForwardBuf.get()),frame_len);
 		if(ncopied != frame_len)
 		{
 			spdlog::get("ProtoConv")->warn("RcvStreamHandler(): Failed to copy whole frame to datagram buffer. Frame size {}, copied {}.",frame_len,ncopied);

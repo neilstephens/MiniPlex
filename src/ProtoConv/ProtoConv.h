@@ -25,7 +25,7 @@
 #include <memory>
 #include <deque>
 
-typedef asio::basic_streambuf<std::allocator<char>> buf_t;
+using buf_t = asio::basic_streambuf<std::allocator<char>>;
 
 struct CmdArgs;
 

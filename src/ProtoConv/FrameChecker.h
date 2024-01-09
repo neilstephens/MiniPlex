@@ -19,14 +19,11 @@
 
 #include <asio.hpp>
 
-typedef asio::basic_streambuf<std::allocator<char>> buf_t;
+using buf_t = asio::basic_streambuf<std::allocator<char>>;
 
-class FrameChecker
+struct FrameChecker
 {
-public:
-	FrameChecker();
 	virtual ~FrameChecker() = default;
-
 	virtual size_t CheckFrame(const buf_t& readbuf) = 0;
 };
 
