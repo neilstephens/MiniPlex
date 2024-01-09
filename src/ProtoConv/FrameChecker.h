@@ -35,7 +35,7 @@ struct Frame
 		seq(seq)
 	{}
 	bool isFragment() const { return !(fir && fin);}
-	operator bool() { return len == 0; };
+	operator bool() { return len != 0; };
 	std::shared_ptr<uint8_t> pBuf = nullptr;
 	size_t len;
 	const bool fir;
