@@ -52,6 +52,7 @@ struct TransportFlow
 	asio::io_service::strand strand;
 	const uint64_t id;
 	std::priority_queue<Frame,std::deque<Frame>,FragCmp> frag_q;
+	std::shared_ptr<Frame> pNextFrame = nullptr;
 	std::set<uint8_t> hasSeq;
 	bool hasFin = false;
 	bool hasFir = false;
@@ -71,19 +72,16 @@ private:
 	std::unordered_map<uint64_t,std::shared_ptr<TransportFlow>> TransportFlows;
 };
 
-inline std::string ToString(const std::priority_queue<Frame,std::deque<Frame>,FragCmp>& Q)
+inline std::string ToString(std::priority_queue<Frame,std::deque<Frame>,FragCmp> Q)
 {
-	struct QPrinter : std::priority_queue<Frame,std::deque<Frame>,FragCmp> // to access protected container
+	std::ostringstream oss;
+	while(!Q.empty())
 	{
-		std::string ToString() const
-		{
-			std::ostringstream oss;
-			for (const auto& f : this->c)
-				oss << f.seq << ((f.fir||f.fin)?"(":"") << (f.fir?"FIR|":"") << (f.fin?"|FIN":"") << ((f.fir||f.fin)?")":"") << ' ';
-			return oss.str();
-		}
-	};
-	return static_cast<const QPrinter&>(Q).ToString();
+		auto f = Q.top();
+		Q.pop();
+		oss << ((f.fir||f.fin)?"(":"") << (f.fir?"FIR":"") << (f.fin?"FIN":"") << ((f.fir||f.fin)?")":"") << f.seq << (!Q.empty()?" ":"");
+	}
+	return oss.str();
 }
 
 #endif // DNP3FRAGHANDLER_H

@@ -25,6 +25,13 @@ DNP3FragHandler::DNP3FragHandler(const std::function<void(std::shared_ptr<uint8_
 
 void DNP3FragHandler::HandleFrame(const Frame& frame)
 {
+	if(frame.flow == 0)//unframed
+	{
+		spdlog::get("ProtoConv")->debug("DNP3FragHandler::HandleFrame(): Passing through unframed 'frame'.",frame.flow);
+		WriteHandler(frame.pBuf,frame.len);
+		return;
+	}
+
 	spdlog::get("ProtoConv")->trace("DNP3FragHandler::HandleFrame(): Got frame for flow 0x{:08x}.",frame.flow);
 	marshalling_strand.post([this,frame{Frame(frame)}]()
 	{
@@ -59,7 +66,8 @@ void DNP3FragHandler::HandleFrame(const Frame& frame)
 				}
 				pTxFlow->hasSeq.insert(frame.seq);
 				pTxFlow->frag_q.emplace(std::move(frame));
-				spdlog::get("ProtoConv")->critical("DNP3FragHandler::HandleFrame(): Flow 0x{:08x} Q: {}.",pTxFlow->id,ToString(pTxFlow->frag_q));
+				if(spdlog::get("ProtoConv")->should_log(spdlog::level::trace)) //don't eval if wouldn't log - too expensive
+					spdlog::get("ProtoConv")->trace("DNP3FragHandler::HandleFrame(): Flow 0x{:08x} Q: {}.",pTxFlow->id,ToString(pTxFlow->frag_q));
 				if((pTxFlow->hasFir && pTxFlow->hasFin)
 				&& (pTxFlow->firSeq + pTxFlow->frag_q.size()-1)%64 == pTxFlow->finSeq)
 				{
@@ -67,13 +75,21 @@ void DNP3FragHandler::HandleFrame(const Frame& frame)
 					Flush(pTxFlow);
 				}
 			}
-			else if(!pTxFlow->frag_q.empty())
+			else //Not a fragment
 			{
-				spdlog::get("ProtoConv")->warn("DNP3FragHandler::HandleFrame(): Flow 0x{:08x}, Non-fragment frame (FIR: {}, FIN: {}, SEQ: {}) with unfinished fragment Q: {}",pTxFlow->id,frame.fir,frame.fin,frame.seq,ToString(pTxFlow->frag_q));
-				Flush(pTxFlow);
+				if(pTxFlow->pNextFrame)
+				{
+					spdlog::get("ProtoConv")->warn("DNP3FragHandler::HandleFrame(): Flow 0x{:08x}, Non-fragment frames backing up (FIR: {}, FIN: {}, SEQ: {}) with unfinished fragment Q: {}",pTxFlow->id,frame.fir,frame.fin,frame.seq,ToString(pTxFlow->frag_q));
+					Flush(pTxFlow);
+				}
+				else if(!pTxFlow->frag_q.empty())
+				{
+					spdlog::get("ProtoConv")->debug("DNP3FragHandler::HandleFrame(): Flow 0x{:08x}, Non-fragment frame saved (FIR: {}, FIN: {}, SEQ: {}).",pTxFlow->id,frame.fir,frame.fin,frame.seq);
+					pTxFlow->pNextFrame = std::make_shared<Frame>(std::move(frame));
+				}
+				else
+					WriteHandler(frame.pBuf,frame.len);
 			}
-			else
-				WriteHandler(frame.pBuf,frame.len);
 		});
 	});
 }
@@ -89,4 +105,9 @@ void DNP3FragHandler::Flush(const std::shared_ptr<TransportFlow>& pTxFlow)
 	pTxFlow->hasFin = false;
 	pTxFlow->hasFir = false;
 	pTxFlow->hasSeq.clear();
+	if(pTxFlow->pNextFrame)
+	{
+		WriteHandler(pTxFlow->pNextFrame->pBuf,pTxFlow->pNextFrame->len);
+		pTxFlow->pNextFrame.reset();
+	}
 }

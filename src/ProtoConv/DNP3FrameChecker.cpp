@@ -183,11 +183,15 @@ Frame DNP3FrameChecker::CheckFrame(const buf_t& readbuf)
 	else
 	{
 		spdlog::get("ProtoConv")->trace("DNP3FrameChecker::CheckFrame(): Valid header, with full frame length.");
-		const uint32_t address_bytes = *(asio::buffers_begin(readbuf.data())+4);
+		const uint8_t dst_lsb = *(asio::buffers_begin(readbuf.data())+4);
+		const uint8_t dst_msb = *(asio::buffers_begin(readbuf.data())+5);
+		const uint8_t src_lsb = *(asio::buffers_begin(readbuf.data())+6);
+		const uint8_t src_msb = *(asio::buffers_begin(readbuf.data())+7);
+		const uint32_t src_dst = (src_msb<<24)+(src_lsb<<16)+(dst_msb<<8)+dst_lsb;
 		if(length == 10)
 		{
 			spdlog::get("ProtoConv")->trace("DNP3FrameChecker::CheckFrame(): Header-only frame.");
-			return Frame(length,true,true,address_bytes);
+			return Frame(length,true,true,src_dst);
 		}
 		//check all the block CRCs
 		bool GoodCRCs;
@@ -196,7 +200,7 @@ Frame DNP3FrameChecker::CheckFrame(const buf_t& readbuf)
 		const bool tx_fin = tx_ctl_byte & 0x80;
 		const bool tx_fir = tx_ctl_byte & 0x40;
 		const uint8_t tx_seq = tx_ctl_byte & 0x3F;
-		Frame frame(length,tx_fir,tx_fin,address_bytes,tx_seq);
+		Frame frame(length,tx_fir,tx_fin,src_dst,tx_seq);
 		do
 		{
 			auto n = (length-start_offset >= 18) ? 16 : length-start_offset-2;
