@@ -41,7 +41,7 @@ private:
 	void RcvUDP();
 	void RcvUDPHandler(const asio::error_code err, const uint8_t* const buf, const size_t n);
 	void RcvStreamHandler(buf_t& buf);
-	void WriteHandler(std::shared_ptr<uint8_t> pBuf, const size_t sz);
+	void WriteUDPHandler(std::shared_ptr<uint8_t> pBuf, const size_t sz);
 
 	const CmdArgs& Args;
 	asio::io_context& IOC;

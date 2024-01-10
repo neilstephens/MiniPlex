@@ -24,6 +24,7 @@
 #include "NullFrameChecker.h"
 #include "DNP3FrameChecker.h"
 #include "NopFragHandler.h"
+#include "DNP3FragHandler.h"
 #include <asio.hpp>
 #include <spdlog/spdlog.h>
 #include <memory>
@@ -38,12 +39,11 @@ ProtoConv::ProtoConv(const CmdArgs& Args, asio::io_context& IOC):
 	socket_strand(IOC),
 	process_strand(IOC)
 {
-	auto writer = [this](std::shared_ptr<uint8_t> pBuf, const size_t sz){WriteHandler(pBuf,sz);};
+	auto writer = [this](std::shared_ptr<uint8_t> pBuf, const size_t sz){WriteUDPHandler(pBuf,sz);};
 	if(Args.FrameProtocol.getValue() == "DNP3")
 	{
 		pFramer = std::make_shared<DNP3FrameChecker>();
-		//TODO: use proper dnp3 frag handler
-		pFragHandler = std::make_shared<NopFragHandler>(writer);
+		pFragHandler = std::make_shared<DNP3FragHandler>(writer,IOC);
 	}
 	else if(Args.FrameProtocol.getValue() == "Null")
 	{
@@ -157,11 +157,11 @@ void ProtoConv::RcvStreamHandler(buf_t& buf)
 	}
 }
 
-void ProtoConv::WriteHandler(std::shared_ptr<uint8_t> pBuf, const size_t sz)
+void ProtoConv::WriteUDPHandler(std::shared_ptr<uint8_t> pBuf, const size_t sz)
 {
 	socket_strand.post([this,pBuf,sz]()
 	{
-		spdlog::get("ProtoConv")->trace("WriteHandler(): Forwarding frame length {} to UDP",sz);
+		spdlog::get("ProtoConv")->trace("WriteUDPHandler(): Forwarding frame length {} to UDP",sz);
 		socket.async_send(asio::buffer(pBuf.get(),sz),[pBuf](asio::error_code,size_t){});
 		//this is safe to call again before the handler is called - because it's non-composed
 		//	according to stackoverflow there is a queue for the file descriptor under-the-hood

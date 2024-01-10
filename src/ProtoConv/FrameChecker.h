@@ -38,10 +38,10 @@ struct Frame
 	operator bool() { return len != 0; };
 	std::shared_ptr<uint8_t> pBuf = nullptr;
 	size_t len;
-	const bool fir;
-	const bool fin;
-	const uint64_t flow;
-	const size_t seq;
+	/*const*/ bool fir;
+	/*const*/ bool fin;
+	/*const*/ uint64_t flow;
+	/*const*/ size_t seq;
 };
 
 struct FrameChecker
