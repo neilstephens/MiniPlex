@@ -1,4 +1,7 @@
-# MiniPlex version 0.3.3
+# MiniPlex version 0.3.4
+
+## 0.3.4
+  * ProtoConv packet delimiters as an alternative to protocol framing
 
 ## 0.3.3
   * ProtoConv updates:
