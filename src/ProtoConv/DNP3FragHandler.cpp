@@ -45,8 +45,6 @@ void DNP3FragHandler::HandleFrame(const Frame& frame)
 		{
 			if(frame.isFragment())
 			{
-				//TODO: check for more bail-out conditions:
-				//	dup seq, other?
 				if((pTxFlow->hasFir && frame.fir) || (pTxFlow->hasFin && frame.fin) || pTxFlow->hasSeq.contains(frame.seq))
 				{
 					spdlog::get("ProtoConv")->warn("DNP3FragHandler::HandleFrame(): Flow 0x{:08x}, Duplicate FIR/FIN/Seq (FIR: {}, FIN: {}, SEQ: {}). Q: {}",pTxFlow->id,frame.fir,frame.fin,frame.seq,ToString(pTxFlow->frag_q));

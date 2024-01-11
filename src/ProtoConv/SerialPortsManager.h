@@ -38,7 +38,7 @@ struct SerialDeviceSettings
 class SerialPortsManager
 {
 public:
-	SerialPortsManager(asio::io_context& IOC, const std::vector<std::string>& devs, const std::function<void(buf_t& readbuf)>& read_handler);
+	SerialPortsManager(asio::io_context& IOC, const std::vector<std::string>& devs, const std::function<void(buf_t& readbuf)>& read_handler, const size_t MaxWriteQSz);
 	~SerialPortsManager();
 	void Write(std::vector<uint8_t>&& data);
 	void Start();
@@ -58,6 +58,7 @@ private:
 	std::vector<asio::serial_port> ports;
 	std::deque<size_t> idle_port_idx_q;
 	std::deque<std::shared_ptr<std::vector<uint8_t>>> write_q;
+	const size_t MaxWriteQSz;
 	asio::io_context::strand write_q_strand;
 	const size_t num_ports;
 	std::vector<buf_t> bufs;

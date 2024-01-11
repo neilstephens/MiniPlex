@@ -17,10 +17,11 @@
 #include "SerialPortsManager.h"
 #include <spdlog/spdlog.h>
 
-SerialPortsManager::SerialPortsManager(asio::io_context& IOC, const std::vector<std::string>& devs, const std::function<void(buf_t&)>& read_handler):
+SerialPortsManager::SerialPortsManager(asio::io_context& IOC, const std::vector<std::string>& devs, const std::function<void(buf_t&)>& read_handler, const size_t MaxWriteQSz):
 	IOC(IOC),
 	handler_tracker(std::make_shared<char>()),
 	port_settings(devs.size()),
+	MaxWriteQSz(MaxWriteQSz),
 	write_q_strand(IOC),
 	num_ports(devs.size()),
 	bufs(devs.size()),
@@ -203,7 +204,7 @@ void SerialPortsManager::Write(std::vector<uint8_t>&& data)
 		else
 		{
 			write_q.push_back(pBuf);
-			if(write_q.size() > 1000)//TODO: make variable limit
+			if(write_q.size() > MaxWriteQSz)
 			{
 				spdlog::get("ProtoConv")->error("Write queue overflow. Dropping oldest message.");
 				write_q.pop_front();

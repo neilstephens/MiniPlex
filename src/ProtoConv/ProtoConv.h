@@ -57,6 +57,7 @@ private:
 	asio::io_context::strand process_strand;
 
 	std::deque<std::shared_ptr<rbuf_t>> rcv_buf_q;
+	const size_t MaxWriteQSz;
 
 	std::atomic_bool stopping = false;
 };

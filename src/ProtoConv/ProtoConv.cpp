@@ -37,7 +37,8 @@ ProtoConv::ProtoConv(const CmdArgs& Args, asio::io_context& IOC):
 	remote_ep(asio::ip::address::from_string(Args.RemoteAddr.getValue()),Args.RemotePort.getValue()),
 	socket(IOC,local_ep),
 	socket_strand(IOC),
-	process_strand(IOC)
+	process_strand(IOC),
+	MaxWriteQSz(Args.MaxWriteQSz.getValue())
 {
 	auto writer = [this](std::shared_ptr<uint8_t> pBuf, const size_t sz){WriteUDPHandler(pBuf,sz);};
 	if(Args.FrameProtocol.getValue() == "DNP3")
@@ -65,7 +66,7 @@ ProtoConv::ProtoConv(const CmdArgs& Args, asio::io_context& IOC):
 		auto prt = std::to_string(Args.TCPPort.getValue());
 		auto srv = !Args.TCPisClient.getValue();
 		spdlog::get("ProtoConv")->info("Operating in TCP {} mode {}:{}",srv?"Server":"Client",ip,prt);
-		auto pSockMan = std::make_shared<TCPSocketManager>(IOC,srv,ip,prt,[this](buf_t& buf){RcvStreamHandler(buf);},[](bool){},1000,true,0,0,0,0,
+		auto pSockMan = std::make_shared<TCPSocketManager>(IOC,srv,ip,prt,[this](buf_t& buf){RcvStreamHandler(buf);},[](bool){},MaxWriteQSz,true,0,0,0,0,
 		[log{spdlog::get("ProtoConv")}](const std::string& lvl, const std::string& msg)
 		{
 			log->log(spdlog::level::from_str(lvl),msg);
@@ -75,7 +76,7 @@ ProtoConv::ProtoConv(const CmdArgs& Args, asio::io_context& IOC):
 	else if(!Args.SerialDevices.getValue().empty())
 	{
 		spdlog::get("ProtoConv")->info("Operating in Serial mode on {} devices",Args.SerialDevices.getValue().size());
-		auto pSerialMan =  std::make_shared<SerialPortsManager>(IOC,Args.SerialDevices.getValue(),[this](buf_t& buf){RcvStreamHandler(buf);});
+		auto pSerialMan =  std::make_shared<SerialPortsManager>(IOC,Args.SerialDevices.getValue(),[this](buf_t& buf){RcvStreamHandler(buf);},MaxWriteQSz);
 
 		if(!Args.SerialBaudRates.getValue().empty())
 			pSerialMan->SetBaudRate(Args.SerialBaudRates.getValue());
