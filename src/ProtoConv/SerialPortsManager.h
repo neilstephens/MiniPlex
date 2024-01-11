@@ -21,7 +21,6 @@
 #include <vector>
 #include <string>
 #include <functional>
-#include <atomic>
 #include <deque>
 
 using buf_t = asio::basic_streambuf<std::allocator<char>>;

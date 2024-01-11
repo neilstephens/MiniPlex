@@ -38,9 +38,16 @@ ProtoConv::ProtoConv(const CmdArgs& Args, asio::io_context& IOC):
 	socket(IOC,local_ep),
 	socket_strand(IOC),
 	process_strand(IOC),
-	MaxWriteQSz(Args.MaxWriteQSz.getValue())
+	MaxWriteQSz(Args.MaxWriteQSz.getValue()),
+	Delim(Args.Delim.getValue())
 {
 	auto writer = [this](std::shared_ptr<uint8_t> pBuf, const size_t sz){WriteUDPHandler(pBuf,sz);};
+	if(Delim != 0)
+	{
+		//FIXME: implement new frame checker and frag handler for delims
+		pFramer = std::make_shared<DNP3FrameChecker>();
+		pFragHandler = std::make_shared<DNP3FragHandler>(writer,IOC);
+	}
 	if(Args.FrameProtocol.getValue() == "DNP3")
 	{
 		pFramer = std::make_shared<DNP3FrameChecker>();
@@ -129,6 +136,7 @@ void ProtoConv::RcvUDPHandler(const asio::error_code err, const uint8_t* const b
 
 	std::vector<uint8_t> data(n);
 	memcpy(data.data(),buf,n);
+	AddDelim(data);
 	pStream->Write(std::move(data));
 }
 
@@ -167,5 +175,31 @@ void ProtoConv::WriteUDPHandler(std::shared_ptr<uint8_t> pBuf, const size_t sz)
 		//this is safe to call again before the handler is called - because it's non-composed
 		//	according to stackoverflow there is a queue for the file descriptor under-the-hood
 	});
+}
+
+void ProtoConv::AddDelim(std::vector<uint8_t>& data)
+{
+	if(Delim == 0)
+		return;
+
+	//reserve space for 32b delim + 32b sequence + 16b CRC
+	data.reserve(data.size()+10);
+
+	using ByteView = std::basic_string_view<const uint8_t>;
+
+	//insert the delimiter
+	ByteView DelimBytes(reinterpret_cast<const uint8_t*>(&Delim),4);
+	auto delim_it = data.insert(data.end(),DelimBytes.begin(),DelimBytes.end());
+
+	//insert the sequence number
+	const uint32_t seq = DelimSeq++;
+	ByteView SeqBytes(reinterpret_cast<const uint8_t*>(&seq),4);
+	data.insert(data.end(),SeqBytes.begin(),SeqBytes.end());
+
+	//calculate and insert the CRC
+	const uint8_t* const delim_addr = &(*(delim_it));
+	const uint16_t crc = crc_ccitt(delim_addr,8);
+	ByteView CRCBytes(reinterpret_cast<const uint8_t*>(&crc),2);
+	data.insert(data.end()-2,CRCBytes.begin(),CRCBytes.end());
 }
 

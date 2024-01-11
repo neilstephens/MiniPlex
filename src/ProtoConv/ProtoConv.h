@@ -42,6 +42,7 @@ private:
 	void RcvUDPHandler(const asio::error_code err, const uint8_t* const buf, const size_t n);
 	void RcvStreamHandler(buf_t& buf);
 	void WriteUDPHandler(std::shared_ptr<uint8_t> pBuf, const size_t sz);
+	void AddDelim(std::vector<uint8_t>& data);
 
 	const CmdArgs& Args;
 	asio::io_context& IOC;
@@ -58,6 +59,8 @@ private:
 
 	std::deque<std::shared_ptr<rbuf_t>> rcv_buf_q;
 	const size_t MaxWriteQSz;
+	const uint32_t Delim;
+	uint32_t DelimSeq = 0;
 
 	std::atomic_bool stopping = false;
 };

@@ -33,6 +33,7 @@ struct CmdArgs
 		RemotePort("r", "remoteport", "Remote port for datagrams.", true, 0, "remote port"),
 		SoRcvBuf("B", "so_rcvbuf", "Datagram socket receive buffer size.", false, 512L*1024, "rcv buf size"),
 		MaxWriteQSz("Q", "write_queue_size", "Max number of messages to buffer in the stream writer queue before dropping (older) data.", false, 1024, "max write queue size"),
+		Delim("D", "packet_delimiter", "Use a packet delimiter (inserted in the stream with sequence and CRC) instead of protocol framing.", false, 0, "packet delimiter"),
 		TCPAddr("T", "tcphost", "If converting TCP, this is the remote IP address for the connection.", false, "", "remote tcp host"),
 		TCPisClient("C","tcpisclient", "If converting TCP, this is defines if it's a client or server connection.", false, true, "tcp is client"),
 		TCPPort("t", "tcpport", "TCP port if converting TCP.", false, 0, "remote tcp port"),
@@ -55,7 +56,7 @@ struct CmdArgs
 		cmd.add(LogFile);
 		cmd.add(FileLevel);
 		cmd.add(ConsoleLevel);
-		cmd.add(FrameProtocol);
+		cmd.xorAdd(FrameProtocol,Delim);
 		cmd.add(SerialStopBits);
 		cmd.add(SerialCharSizes);
 		cmd.add(SerialFlowControls);
@@ -101,6 +102,7 @@ struct CmdArgs
 	TCLAP::ValueArg<uint16_t> RemotePort;
 	TCLAP::ValueArg<size_t> SoRcvBuf;
 	TCLAP::ValueArg<size_t> MaxWriteQSz;
+	TCLAP::ValueArg<uint32_t> Delim;
 	TCLAP::ValueArg<std::string> TCPAddr;
 	TCLAP::ValueArg<bool> TCPisClient;
 	TCLAP::ValueArg<uint16_t> TCPPort;
