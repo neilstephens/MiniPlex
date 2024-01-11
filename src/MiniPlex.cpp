@@ -118,12 +118,18 @@ void MiniPlex::RcvHandler(const asio::error_code err, const uint8_t* const buf, 
 		spdlog::get("MiniPlex")->trace("RcvHandler(): Forwarding to {} branches",cache_EPs.size());
 		for(const auto& endpoint : cache_EPs)
 			if(endpoint != rcv_sender)
-				socket.async_send_to(asio::buffer(pForwardBuf.get(),n),endpoint,[pForwardBuf](asio::error_code,size_t){});
+				socket_strand.post([this,pForwardBuf,n,ep{endpoint}]()
+				{
+					socket.async_send_to(asio::buffer(pForwardBuf.get(),n),ep,[pForwardBuf](asio::error_code,size_t){});
+				});
 	}
 	else
 	{
 		spdlog::get("MiniPlex")->trace("RcvHandler(): Forwarding to trunk");
-		socket.async_send_to(asio::buffer(pForwardBuf.get(),n),trunk,[pForwardBuf](asio::error_code,size_t){});
+		socket_strand.post([this,pForwardBuf,n]()
+		{
+			socket.async_send_to(asio::buffer(pForwardBuf.get(),n),trunk,[pForwardBuf](asio::error_code,size_t){});
+		});
 	}
 }
 
