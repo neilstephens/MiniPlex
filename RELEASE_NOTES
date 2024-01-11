@@ -1,4 +1,13 @@
-# MiniPlex version 0.3.2
+# MiniPlex version 0.3.3
+
+## 0.3.3
+  * ProtoConv updates:
+    * DNP3 frame checking fixes
+    * Serial port write queuing
+    * Write queue size cmdline option
+    * DNP3 transport fragment re-ordering
+  * ProtoConv and MiniPlex:
+    * UDP performance improvements, and cmdline option for changing rcv buffer size socket option
 
 ## 0.3.2
   * Release notes update
