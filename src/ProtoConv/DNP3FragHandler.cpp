@@ -27,7 +27,7 @@ void DNP3FragHandler::HandleFrame(const Frame& frame)
 {
 	if(frame.flow == 0)//unframed
 	{
-		spdlog::get("ProtoConv")->debug("DNP3FragHandler::HandleFrame(): Passing through unframed 'frame'.",frame.flow);
+		spdlog::get("ProtoConv")->debug("DNP3FragHandler::HandleFrame(): Passing through unframed data.");
 		WriteHandler(frame.pBuf,frame.len);
 		return;
 	}

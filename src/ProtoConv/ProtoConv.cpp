@@ -23,8 +23,10 @@
 #include "TCPSocketManager.h"
 #include "NullFrameChecker.h"
 #include "DNP3FrameChecker.h"
+#include "DelimFrameChecker.h"
 #include "NopFragHandler.h"
 #include "DNP3FragHandler.h"
+#include "DelimFragHandler.h"
 #include <asio.hpp>
 #include <spdlog/spdlog.h>
 #include <memory>
@@ -44,11 +46,10 @@ ProtoConv::ProtoConv(const CmdArgs& Args, asio::io_context& IOC):
 	auto writer = [this](std::shared_ptr<uint8_t> pBuf, const size_t sz){WriteUDPHandler(pBuf,sz);};
 	if(Delim != 0)
 	{
-		//FIXME: implement new frame checker and frag handler for delims
-		pFramer = std::make_shared<DNP3FrameChecker>();
-		pFragHandler = std::make_shared<DNP3FragHandler>(writer,IOC);
+		pFramer = std::make_shared<DelimFrameChecker>(Delim);
+		pFragHandler = std::make_shared<DelimFragHandler>(writer,IOC);
 	}
-	if(Args.FrameProtocol.getValue() == "DNP3")
+	else if(Args.FrameProtocol.getValue() == "DNP3")
 	{
 		pFramer = std::make_shared<DNP3FrameChecker>();
 		pFragHandler = std::make_shared<DNP3FragHandler>(writer,IOC);
@@ -200,6 +201,8 @@ void ProtoConv::AddDelim(std::vector<uint8_t>& data)
 	const uint8_t* const delim_addr = &(*(delim_it));
 	const uint16_t crc = crc_ccitt(delim_addr,8);
 	ByteView CRCBytes(reinterpret_cast<const uint8_t*>(&crc),2);
-	data.insert(data.end()-2,CRCBytes.begin(),CRCBytes.end());
+	data.insert(data.end(),CRCBytes.begin(),CRCBytes.end());
+
+	spdlog::get("ProtoConv")->trace("AddDelim(): Delim {}, Seq {}, CRC 0x{:04x}",Delim,seq,crc);
 }
 

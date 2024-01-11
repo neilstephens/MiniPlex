@@ -56,7 +56,7 @@ struct CmdArgs
 		cmd.add(LogFile);
 		cmd.add(FileLevel);
 		cmd.add(ConsoleLevel);
-		cmd.xorAdd(FrameProtocol,Delim);
+		cmd.add(FrameProtocol);
 		cmd.add(SerialStopBits);
 		cmd.add(SerialCharSizes);
 		cmd.add(SerialFlowControls);
@@ -65,6 +65,7 @@ struct CmdArgs
 		cmd.add(TCPPort);
 		cmd.add(TCPisClient);
 		cmd.add(TCPAddr);
+		cmd.add(Delim);
 		cmd.add(MaxWriteQSz);
 		cmd.add(SoRcvBuf);
 		cmd.add(RemotePort);
@@ -78,6 +79,9 @@ struct CmdArgs
 
 		if(TCPAddr.getValue() == "" && SerialDevices.getValue().empty())
 			throw std::invalid_argument("Provide TCP Address or Serial Devices");
+
+		if(Delim.getValue() != 0 && FrameProtocol.isSet())
+			throw std::invalid_argument("Choose frame protocol or packet delimiter, not both");
 
 		asio::error_code err;
 		asio::ip::address::from_string(LocalAddr.getValue(),err);
