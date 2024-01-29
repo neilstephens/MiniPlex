@@ -67,7 +67,7 @@ public:
 		{
 			frame_q.emplace(std::move(frame));
 
-			if(frame_q.size() > 100)//TODO: make configurable
+			if(frame_q.size() > 100)//TODO: make configurable, and also make a timeout for missing frames, not just max out-of-order
 			{
 				spdlog::get("ProtoConv")->warn("DelimFragHandler::HandleFrame(): Too many out of sequence frames ({}), jumping ahead.",frame_q.size());
 				expected_seq = frame_q.top().seq;

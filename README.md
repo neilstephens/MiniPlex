@@ -188,6 +188,36 @@ Where:
    
 ```
 
+## Get MiniPlex
+
+You can download a pre-built binaries for various platforms from the github [Releases](https://github.com/neilstephens/MiniPlex/releases) section. Alternatively, simply build your own copy from source using the instructions below.
+
+## Example Use Case
+
+Suppose you have a network that doesn't support UDP multicast. Maybe it's disabled for security or performance, or maybe you like firewall policies to have strict point-to-point rules.
+But you would still like to stream UDP packets to multiple endpoints. This is where MiniPlex can help. MiniPlex can convert a single unicast stream into multiple streams. For example:
+
+### Stream some audio to multiple endpoints:
+
+Run MiniPlex to listen on port 1234 in hub mode any incoming datagrams will be forwarded to all branches.
+We specify two fixed branches on the command line, because they will just passively recieve data:
+
+```
+./MiniPlex -H -p 1234 -B 192.168.1.5 -b 1234 -B 192.168.1.6 -b 1234
+```
+
+Use vlc to stream out some unicast UDP audio:
+
+```
+vlc sftp://192.168.1.2/Music/ --sout="#std{access=udp, mux=ts, dst=127.0.0.1:1234}"
+```
+
+On the branch hosts (192.168.1.5 and 192.168.1.6 in this example) run vlc to recieve the the audio that is being forwarded by MiniPlex:
+
+```
+vlc udp://@:1234
+```
+
 ## Build
 
 Assuming
