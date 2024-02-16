@@ -11,15 +11,15 @@ ProtoConv: Protocol adapter to convert between a stream and datagrams.
 
 USAGE: 
 
-   ./MiniPlex  {-H|-T|-P} -p <port> [-l <localaddr>] [-o <timeout>] [-r
-               <trunkhost>] [-t <trunkport>] [-B <branchhost>] ... [-b
-               <branchport>] ... [-c <console log level>] [-f <file log
-               level>] [-F <log filename>] [-S <size in kB>] [-N <number of
-               files>] [-x <numthreads>] [-M] [-m <milliseconds>] [--]
-               [--version] [-h]
+   ./MiniPlex  {-H|-T|-P} -p <port> [-l <localaddr>] [-Z <rcv buf size>]
+               [-o <timeout>] [-r <trunkhost>] [-t <trunkport>] [-B
+               <branchhost>] ... [-b <branchport>] ... [-c <console log
+               level>] [-f <file log level>] [-F <log filename>] [-S <size
+               in kB>] [-N <number of files>] [-x <numthreads>] [-M] [-m
+               <milliseconds>] [--] [--version] [-h]
 
 
-Where: 
+Where:
 
    -H,  --hub
      (OR required)  Hub/Star mode: Forward datagrams from/to all endpoints.
@@ -38,6 +38,9 @@ Where:
 
    -l <localaddr>,  --local <localaddr>
      Local ip address. Defaults to 0.0.0.0 for all ipv4 interfaces.
+
+   -Z <rcv buf size>,  --so_rcvbuf <rcv buf size>
+     Datagram socket receive buffer size.
 
    -o <timeout>,  --timeout <timeout>
      Milliseconds to keep an idle endpoint cached
@@ -98,17 +101,18 @@ Where:
 
 
    ./ProtoConv  -l <local port> [-a <local addr>] -A <remote addr> -r
-                <remote port> [-T <remote tcp host>] [-C <tcp is client>]
-                [-t <remote tcp port>] [-s <serial devices>] ... [-b
-                <serial bauds rates>] ... [-L <serial flow ctl settings>]
-                ... [-Z <serial char sizes>] ... [-i <serial stop bits>]
-                ... [-p <frame protocol>] [-c <console log level>] [-f
-                <file log level>] [-F <log filename>] [-S <log file size in
-                kB>] [-N <number of log files>] [-x <numthreads>] [--]
-                [--version] [-h]
+                <remote port> [-B <rcv buf size>] [-Q <max write queue
+                size>] [-D <packet delimiter>] [-T <remote tcp host>] [-C
+                <tcp is client>] [-t <remote tcp port>] [-s <serial
+                devices>] ... [-b <serial bauds rates>] ... [-L <serial
+                flow ctl settings>] ... [-Z <serial char sizes>] ... [-i
+                <serial stop bits>] ... [-p <frame protocol>] [-c <console
+                log level>] [-f <file log level>] [-F <log filename>] [-S
+                <log file size in kB>] [-N <number of log files>] [-x
+                <numthreads>] [--] [--version] [-h]
 
 
-Where: 
+Where:
 
    -l <local port>,  --localport <local port>
      (required)  Local port to listen/receive datagrams on.
@@ -122,6 +126,17 @@ Where:
 
    -r <remote port>,  --remoteport <remote port>
      (required)  Remote port for datagrams.
+
+   -B <rcv buf size>,  --so_rcvbuf <rcv buf size>
+     Datagram socket receive buffer size.
+
+   -Q <max write queue size>,  --write_queue_size <max write queue size>
+     Max number of messages to buffer in the stream writer queue before
+     dropping (older) data.
+
+   -D <packet delimiter>,  --packet_delimiter <packet delimiter>
+     Use a packet delimiter (inserted in the stream with sequence and CRC)
+     instead of protocol framing.
 
    -T <remote tcp host>,  --tcphost <remote tcp host>
      If converting TCP, this is the remote IP address for the connection.
