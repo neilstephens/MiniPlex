@@ -44,7 +44,7 @@ struct CmdArgs
 		SerialCharSizes("Z", "serialcharsize", "List of serial char sizes, if converting serial", false, "serial char sizes"),
 		SerialStopBits("i", "serialstopbits", "List of serial stop bits settings, if converting serial", false, "serial stop bits"),
 		FrameProtocol("p", "frameprotocol", "Parse stream frames based on this protocol", false, "DNP3", "frame protocol"),
-		ConsoleLevel("c", "console_logging", "Console log level: off, critical, error, warn, info, debug, or trace. Default off.", false, "off", "console log level"),
+		ConsoleLevel("c", "console_logging", "Console log level: off, critical, error, warn, info, debug, or trace. Default critical.", false, "critical", "console log level"),
 		FileLevel("f", "file_logging", "File log level: off, critical, error, warn, info, debug, or trace. Default error.", false, "error", "file log level"),
 		LogFile("F", "log_file", "Log filename. Defaults to ./ProtoConv.log", false, "ProtoConv.log", "log filename"),
 		LogSize("S", "log_size", "Roll the log file at this many kB. Defaults to 5000", false, 5000, "log file size in kB"),

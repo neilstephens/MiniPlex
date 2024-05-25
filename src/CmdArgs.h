@@ -38,7 +38,7 @@ struct CmdArgs
 		TrunkPort("t", "trunk_port", "Remote trunk port.", false, 0, "trunkport"),
 		BranchAddrs("B", "branch_ip", "Remote endpoint addresses to permanently cache. Use -b to provide respective ports in the same order.", false, "branchhost"),
 		BranchPorts("b", "branch_port", "Remote endpoint port to permanently cache. Use -B to provide respective addresses in the same order.", false, "branchport"),
-		ConsoleLevel("c", "console_logging", "Console log level: off, critical, error, warn, info, debug, or trace. Default off.", false, "off", "console log level"),
+		ConsoleLevel("c", "console_logging", "Console log level: off, critical, error, warn, info, debug, or trace. Default critical.", false, "critical", "console log level"),
 		FileLevel("f", "file_logging", "File log level: off, critical, error, warn, info, debug, or trace. Default error.", false, "error", "file log level"),
 		LogFile("F", "log_file", "Log filename. Defaults to ./MiniPlex.log", false, "MiniPlex.log", "log filename"),
 		LogSize("S", "log_size", "Roll the log file at this many kB. Defaults to 5000", false, 5000, "size in kB"),
