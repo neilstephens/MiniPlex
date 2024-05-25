@@ -73,8 +73,21 @@ ProtoConv::ProtoConv(const CmdArgs& Args, asio::io_context& IOC):
 		auto ip = Args.TCPAddr.getValue();
 		auto prt = std::to_string(Args.TCPPort.getValue());
 		auto srv = !Args.TCPisClient.getValue();
+
+		std::stringstream ss(Args.TCPConnectBackoffTimes.getValue());
+		AutoOpenOpts autoOpen(true);
+		uint32_t backoff_min, backoff_max, estab_reset_min;
+		if(ss>>backoff_min>>backoff_max>>estab_reset_min)
+		{
+			autoOpen.min_retry_time_ms = backoff_min;
+			autoOpen.max_retry_time_ms = backoff_max;
+			autoOpen.min_established_time_ms = estab_reset_min;
+		}
+		else
+			throw std::invalid_argument("Invalid TCP backoff times: '"+Args.TCPConnectBackoffTimes.getValue()+"'. Should take form '<MinRetryTime> <MaxRetryTime> <EstablishedResetTime>' in milliseconds.");
+
 		spdlog::get("ProtoConv")->info("Operating in TCP {} mode {}:{}",srv?"Server":"Client",ip,prt);
-		auto pSockMan = std::make_shared<TCPSocketManager>(IOC,srv,ip,prt,[this](buf_t& buf){RcvStreamHandler(buf);},[](bool){},MaxWriteQSz,true,0,0,0,0,
+		auto pSockMan = std::make_shared<TCPSocketManager>(IOC,srv,ip,prt,[this](buf_t& buf){RcvStreamHandler(buf);},[](bool){},MaxWriteQSz,autoOpen,ThrottleOpts(),
 		[log{spdlog::get("ProtoConv")}](const std::string& lvl, const std::string& msg)
 		{
 			log->log(spdlog::level::from_str(lvl),msg);
