@@ -30,16 +30,10 @@ TCPSocketManager::TCPSocketManager
 	const std::function<void(buf_t&)>& aReadCallback,
 	const std::function<void(bool)>& aStateCallback,
 	const size_t abuffer_limit,
-	const bool aauto_reopen,
-	const uint16_t aretry_time_ms,
-	const uint64_t athrottle_bitrate,
-	const uint64_t athrottle_chunksize,
-	const uint64_t athrottle_writedelay_ms,
+	const AutoOpenOpts auto_open,
+	const ThrottleOpts throttling,
 	const std::function<void(const std::string&,const std::string&)>& aLogCallback,
-	const bool useKeepalives,
-	const unsigned int KeepAliveTimeout_s,
-	const unsigned int KeepAliveRetry_s,
-	const unsigned int KeepAliveFailcount):
+	const TCPKeepaliveOpts TCP_KA):
 	handler_tracker(std::make_shared<char>()),
 	isConnected(false),
 	pending_write(false),
@@ -50,19 +44,21 @@ TCPSocketManager::TCPSocketManager
 	ReadCallback(aReadCallback),
 	StateCallback(aStateCallback),
 	LogCallback(aLogCallback),
-	Keepalives(useKeepalives,KeepAliveTimeout_s,KeepAliveRetry_s,KeepAliveFailcount),
+	Keepalives(TCP_KA),
 	queue_writebufs(&writebufs1),
 	dispatch_writebufs(&writebufs2),
 	pSock(nullptr),
 	pSockStrand(std::make_unique<asio::io_service::strand>(IOS)),
 	pRetryTimer(std::make_unique<asio::steady_timer>(IOS)),
 	buffer_limit(abuffer_limit),
-	auto_reopen(aauto_reopen),
-	retry_time_ms(aretry_time_ms),
+	auto_reopen(auto_open.enabled),
+	min_retry_time_ms(auto_open.min_retry_time_ms),
+	max_retry_time_ms(auto_open.max_retry_time_ms),
+	min_established_time_ms(auto_open.min_established_time_ms),
 	ramp_time_ms(0),
-	throttle_bitrate(athrottle_bitrate),
-	throttle_chunksize(athrottle_chunksize),
-	throttle_writedelay_ms(athrottle_writedelay_ms),
+	throttle_bitrate(throttling.bitrate),
+	throttle_chunksize(throttling.chunk_size),
+	throttle_writedelay_ms(throttling.write_delay),
 	host_name(aEndPoint),
 	service_name(aPort),
 	EndpointIterator(),
@@ -206,14 +202,14 @@ void TCPSocketManager::Write(shared_const_buffer buf)
 		write_execute(asio::error_code());
 }
 
-void TCPSocketManager::Open(std::shared_ptr<void> tracker)
+bool TCPSocketManager::Open(std::shared_ptr<void> tracker)
 {
 	manuallyClosed = false;
 	if(isConnected || CandidatepSocks.size() || pending_read)
-		return;
+		return false;
 
 	if(!EndPointResolved(tracker))
-		return;
+		return false;
 
 	asio::ip::tcp::resolver::iterator end;
 	for(auto endpoint_it = EndpointIterator; endpoint_it != end; endpoint_it++)
@@ -226,6 +222,7 @@ void TCPSocketManager::Open(std::shared_ptr<void> tracker)
 		else
 			ClientOpen(pCandidateSock, endpoint_it, addr_str, tracker);
 	}
+	return true;
 }
 
 
@@ -444,7 +441,20 @@ void TCPSocketManager::ConnectCompletionHandler(std::shared_ptr<void> tracker, a
 	SetTCPKeepalives(*pSock,Keepalives.enabled,Keepalives.idle_timeout_s,Keepalives.retry_interval_s,Keepalives.fail_count);
 	isConnected = true;
 	StateCallback(isConnected);
-	ramp_time_ms = 0;
+
+	LogCallback("debug","Waiting "+std::to_string(min_established_time_ms)+"ms to reset backoff time.");
+	pRetryTimer->expires_from_now(std::chrono::milliseconds(min_established_time_ms));
+	pRetryTimer->async_wait(pSockStrand->wrap([this,tracker](asio::error_code err_code)
+		{
+			if(!err_code && isConnected)
+			{
+				LogCallback("debug","Resetting auto-open backoff ramp time");
+				ramp_time_ms = 0;
+				//Force endpoint(s) resolution between connections
+				EndpointIterator = asio::ip::tcp::resolver::iterator();
+			}
+		}));
+
 	Read(remote_addr_str,tracker);
 
 	if(manuallyClosed)
@@ -525,27 +535,32 @@ void TCPSocketManager::AutoOpen(std::shared_ptr<void> tracker)
 			if(!auto_reopen || manuallyClosed || isConnected || CandidatepSocks.size() || pending_read)
 				return;
 
-			if(retry_time_ms != 0)
+			if(min_retry_time_ms == max_retry_time_ms)
 			{
-			      ramp_time_ms = retry_time_ms;
+				ramp_time_ms = min_retry_time_ms;
 			}
 
 			if(ramp_time_ms == 0)
 			{
-			      ramp_time_ms = 125;
 			      LogCallback("debug","Trying to open socket...");
-			      Open(tracker);
+				if(Open(tracker))
+					ramp_time_ms = min_retry_time_ms;
 			}
 			else
 			{
+				LogCallback("debug","Waiting "+std::to_string(ramp_time_ms)+"ms to retry auto opening socket.");
 			      pRetryTimer->expires_from_now(std::chrono::milliseconds(ramp_time_ms));
 			      pRetryTimer->async_wait(pSockStrand->wrap([this,tracker](asio::error_code err_code)
 					{
 						if(manuallyClosed || err_code)
 							return;
-						ramp_time_ms *= 2;
 						LogCallback("debug","Re-trying to open socket...");
-						Open(tracker);
+						if(Open(tracker))
+						{
+							ramp_time_ms *= 2;
+							if(ramp_time_ms > max_retry_time_ms)
+								ramp_time_ms = max_retry_time_ms;
+						}
 					}));
 			}
 		});
@@ -592,8 +607,6 @@ void TCPSocketManager::AutoClose(std::shared_ptr<void> tracker)
 			}
 			isConnected = false;
 			StateCallback(isConnected);
-			//Force endpoint(s) resolution between connections
-			EndpointIterator = asio::ip::tcp::resolver::iterator();
 		});
 }
 

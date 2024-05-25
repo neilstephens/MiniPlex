@@ -81,16 +81,42 @@ private:
 
 struct TCPKeepaliveOpts
 {
-	TCPKeepaliveOpts(bool enabled, unsigned int idle_timeout_s, unsigned int retry_interval_s, unsigned int fail_count):
+	TCPKeepaliveOpts(bool enabled = true, unsigned int idle_timeout_s = 599, unsigned int retry_interval_s = 10, unsigned int fail_count = 3):
 		enabled(enabled),
 		idle_timeout_s(idle_timeout_s),
 		retry_interval_s(retry_interval_s),
 		fail_count(fail_count)
 	{}
-	bool enabled;
-	unsigned int idle_timeout_s;
-	unsigned int retry_interval_s;
-	unsigned int fail_count;
+	bool enabled;                   //Whether to set TCP keepalive socket options
+	unsigned int idle_timeout_s;    //TCP keepalive idle timeout (seconds). Used directly for the corresponding 'socket option'
+	unsigned int retry_interval_s;  //TCP keepalive retry interval (seconds). Used directly for the corresponding 'socket option'
+	unsigned int fail_count;        //TCP keepalive fail count. Used directly for the corresponding 'socket option'
+};
+
+struct AutoOpenOpts
+{
+	AutoOpenOpts(bool enabled = false, uint32_t min_retry_time_ms = 125, uint32_t max_retry_time_ms = 30000, uint32_t min_established_time_ms = 5000):
+		enabled(enabled),
+		min_retry_time_ms(min_retry_time_ms),
+		max_retry_time_ms(max_retry_time_ms),
+		min_established_time_ms(min_established_time_ms)
+	{}
+	bool enabled;                          //Keeps the socket open (retry on error), unless you explicitly Close() it
+	unsigned int min_retry_time_ms;        //Minimun period *between* retries (the first retry is instant). The period is doubled on each retry until max is reached (exponential backoff)
+	unsigned int max_retry_time_ms;        //Maximum period between retries. If min and max are equal, the retry period is constant.
+	unsigned int min_established_time_ms;  //The minimum time the socket needs to remain established before the retry time is reset to minimum (otherwise the backoff sequence continues)
+};
+
+struct ThrottleOpts
+{
+	ThrottleOpts(uint64_t bitrate = 0, uint64_t chunk_size = 0, uint64_t write_delay = 0):
+		bitrate(bitrate),
+		chunk_size(chunk_size),
+		write_delay(write_delay)
+	{}
+	unsigned int bitrate;      //You can throttle the throughput, zero means don't throttle
+	unsigned int chunk_size;   //You can define the max chunksize in bytes to write in one go when throttling, zero means dont chunk writes
+	unsigned int write_delay;  //You can define a delay (in milliseconds) before data is written (simulate latency)
 };
 
 struct throttle_data_t
@@ -113,17 +139,11 @@ public:
 		const std::function<void(bool)>& aStateCallback,                  //Handler for communicating the connection state of the socket
 		const size_t abuffer_limit                                        //
 		      = std::numeric_limits<size_t>::max(),                       //maximum number of writes to buffer
-		const bool aauto_reopen = false,                                  //Keeps the socket open (retry on error), unless you explicitly Close() it
-		const uint16_t aretry_time_ms = 0,                                //You can specify a fixed retry time if auto_open is enabled, zero means exponential backoff
-		const uint64_t athrottle_bitrate = 0,                             //You can throttle the throughput, zero means don't throttle
-		const uint64_t athrottle_chunksize = 0,                           //You can define the max chunksize in bytes to write in one go when throttling, zero means dont chunk writes
-		const uint64_t athrottle_writedelay_ms = 0,                       //You can define a delay (in milliseconds) before data is written
+		const AutoOpenOpts auto_open = AutoOpenOpts(),                    //Auto retry options (see above)
+		const ThrottleOpts throttling = ThrottleOpts(),                   //Throtting options (see above)
 		const std::function<void(const std::string&,const std::string&)>& //
 		aLogCallback = [](const std::string&, const std::string&){},      //Handler for log messages
-		const bool useKeepalives = true,                                  //Set TCP keepalive socket option
-		const unsigned int KeepAliveTimeout_s = 599,                      //TCP keepalive idle timeout (seconds)
-		const unsigned int KeepAliveRetry_s = 10,                         //TCP keepalive retry interval (seconds)
-		const unsigned int KeepAliveFailcount = 3);                       //TCP keepalive fail count
+		const TCPKeepaliveOpts TCP_KA = TCPKeepaliveOpts());              //TCP Keepalive options (see above)
 
 	void Open();
 	void Close();
@@ -173,7 +193,9 @@ private:
 
 	//Auto open funtionality - see constructor for description
 	bool auto_reopen;
-	uint16_t retry_time_ms;
+	unsigned int min_retry_time_ms;
+	unsigned int max_retry_time_ms;
+	unsigned int min_established_time_ms;
 	uint16_t ramp_time_ms; //keep track of exponential backoff
 
 	//throttling
@@ -202,7 +224,7 @@ private:
 	void ConnectCompletionHandler(std::shared_ptr<void> tracker, asio::error_code err_code, std::shared_ptr<asio::ip::tcp::socket> pCandidateSock, std::string addr_str, std::string remote_addr_str);
 	void ThrottleReadHandler(const size_t n, asio::error_code err_code, const std::string &remote_addr_str, std::shared_ptr<void> tracker);
 	void Read(std::string remote_addr_str, std::shared_ptr<void> tracker);
-	void Open(std::shared_ptr<void> tracker);
+	bool Open(std::shared_ptr<void> tracker);
 	void AutoOpen(std::shared_ptr<void> tracker);
 	void AutoClose(std::shared_ptr<void> tracker);
 	inline throttle_data_t CheckThrottle(const size_t data_size);
