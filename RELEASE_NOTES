@@ -1,4 +1,8 @@
-# MiniPlex version 1.0.0
+# MiniPlex version 1.0.1
+
+## 1.0.1
+  * ProtoConv: connection retry backoff options for TCP
+  * change to default console log level ('critical' instead of 'off')
 
 ## 1.0.0
   * Delimiter bugfix

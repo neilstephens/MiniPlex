@@ -10,7 +10,7 @@ if(NOT WIN32)
 endif()
 
 project(MiniPlex LANGUAGES CXX)
-add_definitions(-DMP_VERSION="1.0.0")
+add_definitions(-DMP_VERSION="1.0.1")
 
 file(GLOB ${PROJECT_NAME}_SRC src/*.cpp src/*.h)
 

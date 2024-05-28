@@ -145,6 +145,12 @@ Where:
      If converting TCP, this is defines if it's a client or server
      connection.
 
+   -k <tcp connection retry times>,  --tcpretrytimes <tcp connection retry
+      times>
+     Timing parameters for the tcp connection retry exponential backoff:
+     '<MinRetryTime> <MaxRetryTime> <EstablishedResetTime>' in
+     milliseconds
+
    -t <remote tcp port>,  --tcpport <remote tcp port>
      TCP port if converting TCP.
 
