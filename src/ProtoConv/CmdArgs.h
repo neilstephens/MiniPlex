@@ -36,7 +36,7 @@ struct CmdArgs
 		Delim("D", "packet_delimiter", "Use a packet delimiter (inserted in the stream with sequence and CRC) instead of protocol framing.", false, 0, "packet delimiter"),
 		TCPAddr("T", "tcphost", "If converting TCP, this is the remote IP address for the connection.", false, "", "remote tcp host"),
 		TCPisClient("C","tcpisclient", "If converting TCP, this is defines if it's a client or server connection.", false, true, "tcp is client"),
-		TCPConnectBackoffTimes("k","tcpretrytimes","Timing parameters for the tcp connection retry exponential backoff: '<MinRetryTime> <MaxRetryTime> <EstablishedResetTime>' in milliseconds", false, "125;30000;5000", "tcp connection retry times"),
+		TCPConnectBackoffTimes("k","tcpretrytimes","Timing parameters for the tcp connection retry exponential backoff: '<MinRetryTime> <MaxRetryTime> <EstablishedResetTime>' in milliseconds", false, "125 30000 5000", "tcp connection retry times"),
 		TCPPort("t", "tcpport", "TCP port if converting TCP.", false, 0, "remote tcp port"),
 		SerialDevices("s", "serialdevices", "List of serial devices, if converting serial", false, "serial devices"),
 		SerialBaudRates("b", "serialbauds", "List of serial board rates, if converting serial", false, "serial bauds rates"),
