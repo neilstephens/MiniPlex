@@ -21,69 +21,85 @@
 #include <asio.hpp>
 #include <unordered_map>
 #include <chrono>
-#include <shared_mutex>
 #include <functional>
+#include <list>
 
 template <typename T>
 class TimeoutCache
 {
 public:
-	TimeoutCache(asio::io_context& IOC, const size_t timeout_ms):
-		IOC(IOC),
-		timeout(timeout_ms)
+	TimeoutCache(asio::io_service::strand& Strand, const size_t timeout_ms, std::function<void(const T& key)> timeout_handler = [](const T&){}):
+		Strand(Strand),
+		timeout(timeout_ms),
+		timeout_handler(timeout_handler)
 	{}
 	void Clear()
 	{
-		std::unique_lock<std::shared_mutex> write_lck(mtx);
 		Cache.clear();
+		KeySequence.clear();
 	}
-	bool Add(const T& key, std::function<void()> timeout_handler = []{}, bool permanent = false)
+	bool Add(const T& key, bool permanent = false)
 	{
-		bool added = true;
-		std::shared_lock<std::shared_mutex> lck(mtx);
-		auto timer_it = Cache.find(key);
-		if(timer_it != Cache.end()) //reset the existing timer
+		auto key_entry_it = Cache.find(key);
+		if(key_entry_it != Cache.end())
 		{
-			timer_it->second.expires_from_now(timeout);
-			added = false;
+			//Just bump the access time of the existing entry and return
+			key_entry_it->second.AccessTime = std::chrono::steady_clock::now();
+			return false;
 		}
-		else //add a new timer
+
+		//Add a new entry
+		KeySequence.emplace_back(key);
+		key_entry_it = Cache.insert({key,CacheEntry(Strand,timeout,--KeySequence.end())}).first;
+		key_entry_it->second.Timer.async_wait(Strand.wrap([this,key,permanent](asio::error_code err)
 		{
-			lck.unlock(); //temporarily unlock shared to get unique
-			{
-				std::unique_lock<std::shared_mutex> write_lck(mtx);
-				Cache.insert({key,asio::steady_timer(IOC,timeout)});
-			}
-			lck.lock();
-		}
-		Cache.at(key).async_wait([this,key,timeout_handler,permanent](asio::error_code err)
-		{
-			if(err)
-				return;
-			if(permanent)
-				return;
-			{//lock scope
-				std::unique_lock<std::shared_mutex> lck(mtx);
-				Cache.erase(key);
-			}
-			timeout_handler();
-		});
-		return added;
+			TimerHandler(key,permanent,err);
+		}));
+		return true;
 	}
-	const std::vector<T> Keys() const
+	const std::list<T>& Keys() const
 	{
-		std::shared_lock<std::shared_mutex> lck(mtx);
-		std::vector<T> keys;
-		for(auto& [key,t] : Cache)
-			keys.emplace_back(key);
-		return keys;
+		return KeySequence;
 	}
 
 private:
-	asio::io_context& IOC;
+	void TimerHandler(const T& key, const bool permanent, const asio::error_code& err)
+	{
+		if(err)
+			return;
+		if(permanent)
+			return;
+
+		auto now = std::chrono::steady_clock::now();
+		auto& entry = Cache.at(key);
+		auto time_to_expiry = (entry.AccessTime+timeout)-now;
+		if(time_to_expiry > std::chrono::steady_clock::duration::zero())
+		{
+			entry.Timer.expires_from_now(time_to_expiry);
+			entry.Timer.async_wait(Strand.wrap([this,key,permanent](asio::error_code err)
+			{
+				TimerHandler(key,permanent,err);
+			}));
+			return;
+		}
+		KeySequence.erase(entry.KeySequenceIterator);
+		Cache.erase(key);
+		Strand.context().post([this,key]{timeout_handler(key);});
+	}
+	struct CacheEntry
+	{
+		CacheEntry(asio::io_service::strand& Strand, const std::chrono::milliseconds& timeout, const std::list<T>::iterator& it):
+			Timer(Strand.context(),timeout), AccessTime(std::chrono::steady_clock::now()), KeySequenceIterator(it)
+		{}
+		asio::steady_timer Timer;
+		std::chrono::time_point<std::chrono::steady_clock> AccessTime;
+		const std::list<T>::iterator KeySequenceIterator;
+	};
+	asio::io_service::strand& Strand;
 	const std::chrono::milliseconds timeout;
-	std::unordered_map<T,asio::steady_timer> Cache;
-	mutable std::shared_mutex mtx;
+	std::function<void(const T& key)> timeout_handler;
+	std::unordered_map<T,CacheEntry> Cache;
+	std::list<T> KeySequence;
 };
 
 #endif // TIMEOUTCACHE_H
