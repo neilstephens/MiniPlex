@@ -38,7 +38,7 @@ public:
 		Cache.clear();
 		KeySequence.clear();
 	}
-	bool Add(const T& key, bool permanent = false)
+	bool Add(const T& key)
 	{
 		auto key_entry_it = Cache.find(key);
 		if(key_entry_it != Cache.end())
@@ -51,9 +51,9 @@ public:
 		//Add a new entry
 		KeySequence.emplace_back(key);
 		key_entry_it = Cache.insert({key,CacheEntry(Strand,timeout,--KeySequence.end())}).first;
-		key_entry_it->second.Timer.async_wait(Strand.wrap([this,key,permanent](asio::error_code err)
+		key_entry_it->second.Timer.async_wait(Strand.wrap([this,key](asio::error_code err)
 		{
-			TimerHandler(key,permanent,err);
+			TimerHandler(key,err);
 		}));
 		return true;
 	}
@@ -63,11 +63,9 @@ public:
 	}
 
 private:
-	void TimerHandler(const T& key, const bool permanent, const asio::error_code& err)
+	void TimerHandler(const T& key, const asio::error_code& err)
 	{
 		if(err)
-			return;
-		if(permanent)
 			return;
 
 		auto now = std::chrono::steady_clock::now();
@@ -76,9 +74,9 @@ private:
 		if(time_to_expiry > std::chrono::steady_clock::duration::zero())
 		{
 			entry.Timer.expires_from_now(time_to_expiry);
-			entry.Timer.async_wait(Strand.wrap([this,key,permanent](asio::error_code err)
+			entry.Timer.async_wait(Strand.wrap([this,key](asio::error_code err)
 			{
-				TimerHandler(key,permanent,err);
+				TimerHandler(key,err);
 			}));
 			return;
 		}

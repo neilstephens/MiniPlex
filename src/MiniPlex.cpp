@@ -50,7 +50,7 @@ MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 	for(size_t i=0; i<Args.BranchAddrs.getValue().size(); i++)
 	{
 		auto branch = asio::ip::udp::endpoint(asio::ip::address::from_string(Args.BranchAddrs.getValue()[i]),Args.BranchPorts.getValue()[i]);
-		EndPointCache.Add(branch,true);
+		PermaBranches.emplace_back(branch);
 	}
 	socket_strand.post([this](){Rcv();});
 	spdlog::get("MiniPlex")->info("Listening on {}:{}",Args.LocalAddr.getValue(),Args.LocalPort.getValue());
@@ -115,9 +115,9 @@ void MiniPlex::RcvHandler(const asio::error_code err, const uint8_t* const buf, 
 	auto pForwardBuf = std::shared_ptr<uint8_t>(new uint8_t[n],[](uint8_t* p){delete[] p;});
 	std::memcpy(pForwardBuf.get(),buf,n);
 
-	auto forward_to_branches = [&](const auto& branches)
+	auto forward_to_branches = [&](const auto& branches, const char* desc)
 	{
-		spdlog::get("MiniPlex")->trace("RcvHandler(): Forwarding to {} branches",branches.size());
+		spdlog::get("MiniPlex")->trace("RcvHandler(): Forwarding to {} {}",branches.size(),desc);
 		for(const auto& endpoint : branches)
 			if(endpoint != rcv_sender)
 				socket_strand.post([this,pForwardBuf,n,ep{endpoint}]()
@@ -128,19 +128,16 @@ void MiniPlex::RcvHandler(const asio::error_code err, const uint8_t* const buf, 
 
 	if(Args.Hub || rcv_sender == trunk)
 	{
-		if(Args.Prune && !cache_EPs.empty())
-			forward_to_branches(std::list{*cache_EPs.begin()});
+		if(!Args.Prune || cache_EPs.empty())
+		{
+			forward_to_branches(PermaBranches,"fixed branches");
+			forward_to_branches(cache_EPs,"cached branches");
+		}
 		else
-			forward_to_branches(cache_EPs);
+			forward_to_branches(std::list{*cache_EPs.begin()},"pruned branch");
 	}
 	else
-	{
-		spdlog::get("MiniPlex")->trace("RcvHandler(): Forwarding to trunk");
-		socket_strand.post([this,pForwardBuf,n]()
-		{
-			socket.async_send_to(asio::buffer(pForwardBuf.get(),n),trunk,[pForwardBuf](asio::error_code,size_t){});
-		});
-	}
+		forward_to_branches(std::list{*cache_EPs.begin()},"trunk");
 }
 
 void MiniPlex::Benchmark()

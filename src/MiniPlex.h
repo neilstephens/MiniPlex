@@ -23,6 +23,7 @@
 #include <string>
 #include <atomic>
 #include <deque>
+#include <list>
 
 struct CmdArgs;
 
@@ -45,6 +46,7 @@ private:
 	asio::io_context::strand socket_strand;
 	asio::io_context::strand process_strand;
 	TimeoutCache<asio::ip::udp::endpoint> EndPointCache;
+	std::list<asio::ip::udp::endpoint> PermaBranches;
 	asio::ip::udp::endpoint trunk;
 
 	std::deque<std::shared_ptr<rbuf_t>> rcv_buf_q;
