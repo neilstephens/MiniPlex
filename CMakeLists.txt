@@ -53,7 +53,7 @@ else()
     # different release and debug flags
 	set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
-	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g")
+	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g -fno-omit-frame-pointer")
 endif()
 
 find_package(Threads REQUIRED)

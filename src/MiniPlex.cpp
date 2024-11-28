@@ -29,7 +29,11 @@ MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 	socket(IOC,local_ep),
 	socket_strand(IOC),
 	process_strand(IOC),
-	EndPointCache(IOC,Args.CacheTimeout.getValue())
+	EndPointCache(process_strand,Args.CacheTimeout.getValue(),[](const asio::ip::udp::endpoint& ep)
+	{
+		auto ep_string = ep.address().to_string()+":"+std::to_string(ep.port());
+		spdlog::get("MiniPlex")->debug("Cache entry for {} timed out.",ep_string);
+	})
 {
 	asio::socket_base::receive_buffer_size option(Args.SoRcvBuf.getValue());
 	socket.set_option(option);
@@ -46,7 +50,7 @@ MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 	for(size_t i=0; i<Args.BranchAddrs.getValue().size(); i++)
 	{
 		auto branch = asio::ip::udp::endpoint(asio::ip::address::from_string(Args.BranchAddrs.getValue()[i]),Args.BranchPorts.getValue()[i]);
-		EndPointCache.Add(branch,[]{},true);
+		EndPointCache.Add(branch,true);
 	}
 	socket_strand.post([this](){Rcv();});
 	spdlog::get("MiniPlex")->info("Listening on {}:{}",Args.LocalAddr.getValue(),Args.LocalPort.getValue());
@@ -91,9 +95,9 @@ void MiniPlex::RcvHandler(const asio::error_code err, const uint8_t* const buf, 
 	auto sender_string = rcv_sender.address().to_string()+":"+std::to_string(rcv_sender.port());
 	spdlog::get("MiniPlex")->trace("RcvHandler(): {} bytes from {}",n,sender_string);
 
-	auto cache_EPs = EndPointCache.Keys();
+	const auto& cache_EPs = EndPointCache.Keys();
 
-	if(Args.Prune && rcv_sender != trunk && cache_EPs.size() && rcv_sender != cache_EPs[0])
+	if(Args.Prune && rcv_sender != trunk && !cache_EPs.empty() && rcv_sender != *cache_EPs.begin())
 	{
 		spdlog::get("MiniPlex")->debug("RcvHandler(): pruned branch {}",sender_string);
 		return;
@@ -101,10 +105,7 @@ void MiniPlex::RcvHandler(const asio::error_code err, const uint8_t* const buf, 
 
 	if(Args.Hub || rcv_sender != trunk)
 	{
-		auto added = EndPointCache.Add(rcv_sender,[sender_string]()
-		{
-			spdlog::get("MiniPlex")->debug("RcvHandler(): Cache entry for {} timed out.",sender_string);
-		});
+		auto added = EndPointCache.Add(rcv_sender);
 		spdlog::get("MiniPlex")->trace("RcvHandler(): {} cache entry for {}",added?"Inserted":"Refreshed",sender_string);
 	}
 
