@@ -29,7 +29,7 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - run: git fetch --force --tags
@@ -42,7 +42,7 @@ jobs:
 
     - if: always()
       name: Upload Exes
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: MiniPlex_${{env.JOB_NAME}}_exe
         retention-days: 7
@@ -76,7 +76,7 @@ jobs:
 
     steps:
     
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - run: git fetch --force --tags
@@ -102,7 +102,7 @@ jobs:
 
     - if: always()
       name: Upload Exes
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: MiniPlex_${{env.JOB_NAME}}_exe
         retention-days: 7
@@ -121,7 +121,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download Exes
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         
       - name: Zip Exes
         run: |
