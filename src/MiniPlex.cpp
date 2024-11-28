@@ -95,18 +95,18 @@ void MiniPlex::RcvHandler(const asio::error_code err, const uint8_t* const buf, 
 	auto sender_string = rcv_sender.address().to_string()+":"+std::to_string(rcv_sender.port());
 	spdlog::get("MiniPlex")->trace("RcvHandler(): {} bytes from {}",n,sender_string);
 
-	const auto& cache_EPs = EndPointCache.Keys();
-
-	if(Args.Prune && rcv_sender != trunk && !cache_EPs.empty() && rcv_sender != *cache_EPs.begin())
-	{
-		spdlog::get("MiniPlex")->debug("RcvHandler(): pruned branch {}",sender_string);
-		return;
-	}
-
 	if(Args.Hub || rcv_sender != trunk)
 	{
 		auto added = EndPointCache.Add(rcv_sender);
 		spdlog::get("MiniPlex")->trace("RcvHandler(): {} cache entry for {}",added?"Inserted":"Refreshed",sender_string);
+	}
+
+	const auto& cache_EPs = EndPointCache.Keys();
+
+	if(Args.Prune && rcv_sender != trunk && !cache_EPs.empty() && rcv_sender != *cache_EPs.begin())
+	{
+		spdlog::get("MiniPlex")->debug("RcvHandler(): pruned packet for branch {}",sender_string);
+		return;
 	}
 
 	// The C++20 way causes a malloc error when asio tries to copy a handler with this style shared_ptr
@@ -114,15 +114,24 @@ void MiniPlex::RcvHandler(const asio::error_code err, const uint8_t* const buf, 
 	// Use the old way instead - only difference should be the control block is allocated separately
 	auto pForwardBuf = std::shared_ptr<uint8_t>(new uint8_t[n],[](uint8_t* p){delete[] p;});
 	std::memcpy(pForwardBuf.get(),buf,n);
-	if(Args.Hub || rcv_sender == trunk)
+
+	auto forward_to_branches = [&](const auto& branches)
 	{
-		spdlog::get("MiniPlex")->trace("RcvHandler(): Forwarding to {} branches",cache_EPs.size());
-		for(const auto& endpoint : cache_EPs)
+		spdlog::get("MiniPlex")->trace("RcvHandler(): Forwarding to {} branches",branches.size());
+		for(const auto& endpoint : branches)
 			if(endpoint != rcv_sender)
 				socket_strand.post([this,pForwardBuf,n,ep{endpoint}]()
 				{
 					socket.async_send_to(asio::buffer(pForwardBuf.get(),n),ep,[pForwardBuf](asio::error_code,size_t){});
 				});
+	};
+
+	if(Args.Hub || rcv_sender == trunk)
+	{
+		if(Args.Prune && !cache_EPs.empty())
+			forward_to_branches(std::list{*cache_EPs.begin()});
+		else
+			forward_to_branches(cache_EPs);
 	}
 	else
 	{
