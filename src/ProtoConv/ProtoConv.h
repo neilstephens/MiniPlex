@@ -28,12 +28,23 @@
 
 using buf_t = asio::basic_streambuf<std::allocator<char>>;
 
+//using vector<uint8_t> and reinterpret_cast to serialise other types,
+// so let's add a few checks
+static_assert(std::is_same<uint8_t, unsigned char>::value,
+"We require uint8_t to be implemented as unsigned char");
+static_assert(sizeof(uint32_t)==4,
+"We require uint32_t to be 4 bytes long");
+static_assert(sizeof(uint16_t)==2,
+"We require uint16_t to be 2 bytes long");
+static_assert(sizeof(uint8_t)==sizeof(char),
+"We require uint8_t to be the same size as char");
+
 struct CmdArgs;
 
 class ProtoConv
 {
 public:
-	ProtoConv(const CmdArgs& Args, asio::io_context &IOC);
+	ProtoConv(const CmdArgs& aArgs, asio::io_context &aIOC);
 
 private:
 	using rbuf_t = std::array<uint8_t, 64L * 1024>;

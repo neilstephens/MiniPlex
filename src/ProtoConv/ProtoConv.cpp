@@ -31,10 +31,11 @@
 #include <spdlog/spdlog.h>
 #include <memory>
 #include <csignal>
+#include <span>
 
-ProtoConv::ProtoConv(const CmdArgs& Args, asio::io_context& IOC):
-	Args(Args),
-	IOC(IOC),
+ProtoConv::ProtoConv(const CmdArgs& aArgs, asio::io_context& aIOC):
+	Args(aArgs),
+	IOC(aIOC),
 	local_ep(asio::ip::address::from_string(Args.LocalAddr.getValue()),Args.LocalPort.getValue()),
 	remote_ep(asio::ip::address::from_string(Args.RemoteAddr.getValue()),Args.RemotePort.getValue()),
 	socket(IOC,local_ep),
@@ -199,7 +200,7 @@ void ProtoConv::AddDelim(std::vector<uint8_t>& data)
 	//reserve space for 32b delim + 32b sequence + 16b CRC
 	data.reserve(data.size()+10);
 
-	using ByteView = std::basic_string_view<const uint8_t>;
+	using ByteView = std::span<const uint8_t>;
 
 	//insert the delimiter
 	ByteView DelimBytes(reinterpret_cast<const uint8_t*>(&Delim),4);

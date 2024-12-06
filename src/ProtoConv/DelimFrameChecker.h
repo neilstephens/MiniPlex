@@ -21,6 +21,7 @@
 #include "FrameChecker.h"
 #include <algorithm>
 #include <spdlog/spdlog.h>
+#include <span>
 
 class DelimFrameChecker : public FrameChecker
 {
@@ -39,7 +40,7 @@ public:
 		size_t frame_len = 10;
 		for(auto byte_it = buf_begin+3; byte_it+6 != buf_end; byte_it++)
 		{
-			std::basic_string_view<const char> DelimBytes(reinterpret_cast<const char*>(&Delim),4);
+			std::span<const char> DelimBytes(reinterpret_cast<const char*>(&Delim),4);
 			if(std::equal(DelimBytes.begin(),DelimBytes.end(),byte_it-3))
 			{
 				spdlog::get("ProtoConv")->trace("DelimFrameChecker::CheckFrame(): Found matching delimiter({}), frame length {}.",Delim,frame_len);
