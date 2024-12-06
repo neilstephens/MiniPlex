@@ -137,7 +137,7 @@ void MiniPlex::RcvHandler(const asio::error_code err, const uint8_t* const buf, 
 			forward_to_branches(std::list{*cache_EPs.begin()},"pruned branch");
 	}
 	else
-		forward_to_branches(std::list{*cache_EPs.begin()},"trunk");
+		forward_to_branches(std::list{trunk},"trunk");
 }
 
 void MiniPlex::Benchmark()
