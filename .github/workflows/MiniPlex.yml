@@ -71,7 +71,7 @@ jobs:
       name: Mac docker
       run: |
         brew install docker
-        colima start
+        brew services start colima
 
     - if: ${{ !contains(matrix.os,'windows') }}
       name: Test Hub Mode
