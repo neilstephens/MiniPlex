@@ -193,7 +193,7 @@ jobs:
     - if: always()
       name: Test Permanent Branches
       run: |
-        Test/PermanentBranches.sh 50000 50001 127.0.0.1 20002
+        Test/PermanentBranches.sh 50000 50001 127.0.0.1 20003
 
     - if: always()
       name: Stop MiniPlex
