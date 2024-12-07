@@ -67,7 +67,7 @@ jobs:
         start /b ${{github.workspace}}/build/**/MiniPlex.exe -P -p 20002 -r 172.17.0.2 -t 50000
         start /b ${{github.workspace}}/build/**/MiniPlex.exe -P -p 20003 -r 172.17.0.2 -t 50000 -B 172.17.0.2 -b 50001
 
-    - if: !contains(matrix.os,'windows')
+    - if: ${{ !contains(matrix.os,'windows') }}
       name: Start MiniPlex
       run: |
         ${{github.workspace}}/build/MiniPlex -H -p 20000 &
@@ -108,7 +108,7 @@ jobs:
       run: |
         taskkill /F /IM "MiniPlex.exe"
 
-    - if: !contains(matrix.os,'windows')
+    - if: ${{ !contains(matrix.os,'windows') }}
       name: Stop MiniPlex
       run: |
         killall MiniPlex || true
