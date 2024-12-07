@@ -87,8 +87,6 @@ struct CmdArgs
 		}
 		if(BranchAddrs.getValue().size() != BranchPorts.getValue().size())
 			throw std::invalid_argument("Please provide the same number of branch IPs and branch ports. They will be paired.");
-		if(Prune && BranchAddrs.getValue().size() > 0)
-			throw std::invalid_argument("Permanent cache entries (-B/b) invalidates Prune mode.");
 	}
 	TCLAP::CmdLine cmd;
 	TCLAP::SwitchArg Hub;
