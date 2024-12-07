@@ -77,7 +77,7 @@ jobs:
     - if: always() && contains(matrix.os,'ubuntu')
       name: Linux ncat
       run: |
-        apt-get install -y ncat
+        sudo apt-get install -y ncat
 
     - if: ${{ always() && !contains(matrix.os,'windows') }}
       name: Test Hub Mode
@@ -173,7 +173,7 @@ jobs:
     - if: always()
       name: Linux ncat
       run: |
-        apt-get install -y ncat
+        sudo apt-get install -y ncat
 
     - if: always()
       name: Test Hub Mode
