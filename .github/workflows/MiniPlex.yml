@@ -59,14 +59,6 @@ jobs:
           RELEASE_NOTES
           3rdPartyLicenses/LICENSE_1_0.txt
 
-    - if: contains(matrix.os,'windows')
-      name: Start Windows MiniPlex
-      run: |
-        start /b ${{github.workspace}}/build/**/MiniPlex.exe -H -p 20000
-        start /b ${{github.workspace}}/build/**/MiniPlex.exe -T -p 20001 -r 172.17.0.2 -t 50000
-        start /b ${{github.workspace}}/build/**/MiniPlex.exe -P -p 20002 -r 172.17.0.2 -t 50000
-        start /b ${{github.workspace}}/build/**/MiniPlex.exe -P -p 20003 -r 172.17.0.2 -t 50000 -B 172.17.0.2 -b 50001
-
     - if: ${{ !contains(matrix.os,'windows') }}
       name: Start MiniPlex
       run: |
@@ -74,39 +66,40 @@ jobs:
         ${{github.workspace}}/build/MiniPlex -T -p 20001 -r 172.17.0.2 -t 50000 &
         ${{github.workspace}}/build/MiniPlex -P -p 20002 -r 172.17.0.2 -t 50000 &
         ${{github.workspace}}/build/MiniPlex -P -p 20003 -r 172.17.0.2 -t 50000 -B 172.17.0.2 -b 50001 &
+        
+    - if: contains(matrix.os,'macos')
+      name: Mac docker
+      run: |
+        brew install docker
+        colima start
 
-    - if: always()
+    - if: ${{ !contains(matrix.os,'windows') }}
       name: Test Hub Mode
       shell: bash
       run: |
         docker build --build-arg SCRIPT_NAME=Test/HubMode.sh -t miniplex-test -f DockerFiles/Test .
         docker run --add-host=host.docker.internal:host-gateway miniplex-test host.docker.internal 20000
 
-    - if: always()
+    - if: ${{ !contains(matrix.os,'windows') }}
       name: Test Trunk Mode
       shell: bash
       run: |
         docker build --build-arg SCRIPT_NAME=Test/TrunkMode.sh -t miniplex-test -f DockerFiles/Test .
         docker run --add-host=host.docker.internal:host-gateway miniplex-test 50000 host.docker.internal 20001
 
-    - if: always()
+    - if: ${{ !contains(matrix.os,'windows') }}
       name: Test Prune Mode
       shell: bash
       run: |
         docker build --build-arg SCRIPT_NAME=Test/PruneMode.sh -t miniplex-test -f DockerFiles/Test .
         docker run --add-host=host.docker.internal:host-gateway miniplex-test 50000 host.docker.internal 20002
 
-    - if: always()
+    - if: ${{ !contains(matrix.os,'windows') }}
       name: Test Permanent Branches
       shell: bash
       run: |
         docker build --build-arg SCRIPT_NAME=Test/PermanentBranches.sh -t miniplex-test -f DockerFiles/Test .
         docker run --add-host=host.docker.internal:host-gateway miniplex-test 50000 50001 host.docker.internal 20003
-
-    - if: contains(matrix.os,'windows')
-      name: Stop Windows MiniPlex
-      run: |
-        taskkill /F /IM "MiniPlex.exe"
 
     - if: ${{ !contains(matrix.os,'windows') }}
       name: Stop MiniPlex
