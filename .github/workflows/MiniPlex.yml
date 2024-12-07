@@ -59,50 +59,47 @@ jobs:
           RELEASE_NOTES
           3rdPartyLicenses/LICENSE_1_0.txt
 
-    - if: ${{ !contains(matrix.os,'windows') }}
+    - if: ${{ always() && !contains(matrix.os,'windows') }}
       name: Start MiniPlex
+      shell: bash
       run: |
         ${{github.workspace}}/build/MiniPlex -H -p 20000 &
-        ${{github.workspace}}/build/MiniPlex -T -p 20001 -r 172.17.0.2 -t 50000 &
-        ${{github.workspace}}/build/MiniPlex -P -p 20002 -r 172.17.0.2 -t 50000 &
-        ${{github.workspace}}/build/MiniPlex -P -p 20003 -r 172.17.0.2 -t 50000 -B 172.17.0.2 -b 50001 &
+        ${{github.workspace}}/build/MiniPlex -T -p 20001 -r 127.0.0.1 -t 50000 &
+        ${{github.workspace}}/build/MiniPlex -P -p 20002 -r 127.0.0.1 -t 50000 &
+        ${{github.workspace}}/build/MiniPlex -P -p 20003 -r 127.0.0.1 -t 50000 -B 127.0.0.1 -b 50001 &
+        sleep 1
         
-    - if: contains(matrix.os,'macos')
-      name: Mac docker
+    - if: always() && contains(matrix.os,'macos')
+      name: Mac ncat
       run: |
-        brew install docker colima
-        brew services start colima
-        sudo ln -s ~/.docker/run/docker.sock /var/run/docker.sock
+        brew install nmap
+        
+    - if: always() && contains(matrix.os,'ubuntu')
+      name: Linux ncat
+      run: |
+        apt-get install -y ncat
 
-    - if: ${{ !contains(matrix.os,'windows') }}
+    - if: ${{ always() && !contains(matrix.os,'windows') }}
       name: Test Hub Mode
-      shell: bash
       run: |
-        docker build --build-arg SCRIPT_NAME=Test/HubMode.sh -t miniplex-test -f DockerFiles/Test .
-        docker run --add-host=host.docker.internal:host-gateway miniplex-test host.docker.internal 20000
+        Test/HubMode.sh 127.0.0.1 20000
 
-    - if: ${{ !contains(matrix.os,'windows') }}
+    - if: ${{ always() && !contains(matrix.os,'windows') }}
       name: Test Trunk Mode
-      shell: bash
       run: |
-        docker build --build-arg SCRIPT_NAME=Test/TrunkMode.sh -t miniplex-test -f DockerFiles/Test .
-        docker run --add-host=host.docker.internal:host-gateway miniplex-test 50000 host.docker.internal 20001
+        Test/TrunkMode.sh 50000 127.0.0.1 20001
 
-    - if: ${{ !contains(matrix.os,'windows') }}
+    - if: ${{ always() && !contains(matrix.os,'windows') }}
       name: Test Prune Mode
-      shell: bash
       run: |
-        docker build --build-arg SCRIPT_NAME=Test/PruneMode.sh -t miniplex-test -f DockerFiles/Test .
-        docker run --add-host=host.docker.internal:host-gateway miniplex-test 50000 host.docker.internal 20002
+        Test/PruneMode.sh 50000 127.0.0.1 20002
 
-    - if: ${{ !contains(matrix.os,'windows') }}
+    - if: ${{ always() && !contains(matrix.os,'windows') }}
       name: Test Permanent Branches
-      shell: bash
       run: |
-        docker build --build-arg SCRIPT_NAME=Test/PermanentBranches.sh -t miniplex-test -f DockerFiles/Test .
-        docker run --add-host=host.docker.internal:host-gateway miniplex-test 50000 50001 host.docker.internal 20003
+        Test/PermanentBranches.sh 50000 50001 127.0.0.1 20003
 
-    - if: ${{ !contains(matrix.os,'windows') }}
+    - if: ${{ always() && !contains(matrix.os,'windows') }}
       name: Stop MiniPlex
       run: |
         killall MiniPlex || true
@@ -162,6 +159,46 @@ jobs:
           README.md
           RELEASE_NOTES
           3rdPartyLicenses/LICENSE_1_0.txt
+          
+    - if: always()
+      name: Start MiniPlex
+      shell: bash
+      run: |
+        build/MiniPlex -H -p 20000 &
+        build/MiniPlex -T -p 20001 -r 127.0.0.1 -t 50000 &
+        build/MiniPlex -P -p 20002 -r 127.0.0.1 -t 50000 &
+        build/MiniPlex -P -p 20003 -r 127.0.0.1 -t 50000 -B 127.0.0.1 -b 50001 &
+        sleep 1
+        
+    - if: always()
+      name: Linux ncat
+      run: |
+        apt-get install -y ncat
+
+    - if: always()
+      name: Test Hub Mode
+      run: |
+        Test/HubMode.sh 127.0.0.1 20000
+
+    - if: always()
+      name: Test Trunk Mode
+      run: |
+        Test/TrunkMode.sh 50000 127.0.0.1 20001
+
+    - if: always()
+      name: Test Prune Mode
+      run: |
+        Test/PruneMode.sh 50000 127.0.0.1 20002
+
+    - if: always()
+      name: Test Permanent Branches
+      run: |
+        Test/PermanentBranches.sh 50000 50001 127.0.0.1 20002
+
+    - if: always()
+      name: Stop MiniPlex
+      run: |
+        killall MiniPlex || true
 
   deploy-job:
     if: always() && contains(github.ref, 'tag')
