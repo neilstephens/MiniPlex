@@ -1,8 +1,11 @@
-# MiniPlex version 1.1.0
+# MiniPlex version 1.1.1
 
-## 1.1.0
+## 1.1.1
   * Fixed prune mode (-P) to be compatible with permanent branches (-B/-b)
   * Fixed -k default (defaults were invalid, forcing use of explicit -k)
+  * Backed by CI tests
+
+## 1.1.0 - BROKEN release
 
 ## 1.0.1
   * ProtoConv: connection retry backoff options for TCP
