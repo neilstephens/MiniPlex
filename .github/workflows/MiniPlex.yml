@@ -58,26 +58,35 @@ jobs:
           README.md
           RELEASE_NOTES
           3rdPartyLicenses/LICENSE_1_0.txt
-
-    - if: ${{ always() && !contains(matrix.os,'windows') }}
-      name: Start MiniPlex
-      shell: bash
-      run: |
-        ${{github.workspace}}/build/MiniPlex -H -p 20000 &
-        ${{github.workspace}}/build/MiniPlex -T -p 20001 -r 127.0.0.1 -t 50000 &
-        ${{github.workspace}}/build/MiniPlex -P -p 20002 -r 127.0.0.1 -t 50000 &
-        ${{github.workspace}}/build/MiniPlex -P -p 20003 -r 127.0.0.1 -t 50000 -B 127.0.0.1 -b 50001 &
-        sleep 1
-        
+          
     - if: always() && contains(matrix.os,'macos')
-      name: Mac ncat
+      name: Mac Cats
       run: |
-        brew install nmap
+        brew install nmap socat
         
     - if: always() && contains(matrix.os,'ubuntu')
-      name: Linux ncat
+      name: Linux Cats
       run: |
-        sudo apt-get install -y ncat
+        sudo apt-get install -y ncat socat
+
+    - if: ${{ always() && !contains(matrix.os,'windows') }}
+      name: Start Test Processes
+      shell: bash
+      run: |
+        build/MiniPlex -H -p 20000 &
+        build/MiniPlex -T -p 20001 -r 127.0.0.1 -t 50000 &
+        build/MiniPlex -P -p 20002 -r 127.0.0.1 -t 50000 &
+        build/MiniPlex -P -p 20003 -r 127.0.0.1 -t 50000 -B 127.0.0.1 -b 50001 &
+        socat pty,raw,echo=0,link=SerialEndpoint1 pty,raw,echo=0,link=SerialEndpoint2 &
+        socat pty,raw,echo=0,link=SerialEndpoint3 pty,raw,echo=0,link=SerialEndpoint4 &
+        socat pty,raw,echo=0,link=SerialEndpoint5 pty,raw,echo=0,link=SerialEndpoint6 &
+        socat pty,raw,echo=0,link=SerialEndpoint7 pty,raw,echo=0,link=SerialEndpoint8 &
+        sleep 0.5
+        build/ProtoConv -l 21000 -A 127.0.0.1 -r 21001 -D 12345 -s SerialEndpoint1 -s SerialEndpoint3 -s SerialEndpoint5 -s SerialEndpoint7 &
+        build/ProtoConv -l 22000 -A 127.0.0.1 -r 22001 -D 12345 -s SerialEndpoint8 -s SerialEndpoint6 -s SerialEndpoint4 -s SerialEndpoint2 &
+        build/ProtoConv -l 23000 -A 127.0.0.1 -r 23001 -p DNP3 -C 0 -T 127.0.0.1 -t 20000 &
+        sleep 0.5
+        build/ProtoConv -l 24000 -A 127.0.0.1 -r 24001 -p DNP3 -C 1 -T 127.0.0.1 -t 20000 &
 
     - if: ${{ always() && !contains(matrix.os,'windows') }}
       name: Test Hub Mode
@@ -98,10 +107,22 @@ jobs:
       name: Test Permanent Branches
       run: |
         Test/PermanentBranches.sh 50000 50001 127.0.0.1 20003
+        
+    - if: ${{ always() && !contains(matrix.os,'windows') }}
+      name: Test ProtoConv Delim
+      run: |
+        Test/ProtoConvInOut.pl Test/DNP3Hex.txt 21001 127.0.0.1 21000 22001 127.0.0.1 22000 /tmp/out.txt Test/DNP3Hex.txt
+        
+    - if: ${{ always() && !contains(matrix.os,'windows') }}
+      name: Test ProtoConv DNP3
+      run: |
+        Test/ProtoConvInOut.pl Test/DNP3HexOutOfOrder.txt 23001 127.0.0.1 23000 24001 127.0.0.1 24000 /tmp/out.txt Test/DNP3Hex.txt
 
     - if: ${{ always() && !contains(matrix.os,'windows') }}
-      name: Stop MiniPlex
+      name: Stop Test Processes
       run: |
+        killall ProtoConv || true
+        killall socat || true
         killall MiniPlex || true
           
   musl-build-job:
@@ -161,19 +182,28 @@ jobs:
           3rdPartyLicenses/LICENSE_1_0.txt
           
     - if: always()
-      name: Start MiniPlex
+      name: Linux Cats
+      run: |
+        sudo apt-get install -y ncat socat
+
+    - if: always()
+      name: Start Test Processes
       shell: bash
       run: |
         build/MiniPlex -H -p 20000 &
         build/MiniPlex -T -p 20001 -r 127.0.0.1 -t 50000 &
         build/MiniPlex -P -p 20002 -r 127.0.0.1 -t 50000 &
         build/MiniPlex -P -p 20003 -r 127.0.0.1 -t 50000 -B 127.0.0.1 -b 50001 &
-        sleep 1
-        
-    - if: always()
-      name: Linux ncat
-      run: |
-        sudo apt-get install -y ncat
+        socat pty,raw,echo=0,link=SerialEndpoint1 pty,raw,echo=0,link=SerialEndpoint2 &
+        socat pty,raw,echo=0,link=SerialEndpoint3 pty,raw,echo=0,link=SerialEndpoint4 &
+        socat pty,raw,echo=0,link=SerialEndpoint5 pty,raw,echo=0,link=SerialEndpoint6 &
+        socat pty,raw,echo=0,link=SerialEndpoint7 pty,raw,echo=0,link=SerialEndpoint8 &
+        sleep 0.5
+        build/ProtoConv -l 21000 -A 127.0.0.1 -r 21001 -D 12345 -s SerialEndpoint1 -s SerialEndpoint3 -s SerialEndpoint5 -s SerialEndpoint7 &
+        build/ProtoConv -l 22000 -A 127.0.0.1 -r 22001 -D 12345 -s SerialEndpoint8 -s SerialEndpoint6 -s SerialEndpoint4 -s SerialEndpoint2 &
+        build/ProtoConv -l 23000 -A 127.0.0.1 -r 23001 -p DNP3 -C 0 -T 127.0.0.1 -t 20000 &
+        sleep 0.5
+        build/ProtoConv -l 24000 -A 127.0.0.1 -r 24001 -p DNP3 -C 1 -T 127.0.0.1 -t 20000 &
 
     - if: always()
       name: Test Hub Mode
@@ -194,10 +224,22 @@ jobs:
       name: Test Permanent Branches
       run: |
         Test/PermanentBranches.sh 50000 50001 127.0.0.1 20003
+        
+    - if: always()
+      name: Test ProtoConv Delim
+      run: |
+        Test/ProtoConvInOut.pl Test/DNP3Hex.txt 21001 127.0.0.1 21000 22001 127.0.0.1 22000 /tmp/out.txt Test/DNP3Hex.txt
+        
+    - if: always()
+      name: Test ProtoConv DNP3
+      run: |
+        Test/ProtoConvInOut.pl Test/DNP3HexOutOfOrder.txt 23001 127.0.0.1 23000 24001 127.0.0.1 24000 /tmp/out.txt Test/DNP3Hex.txt
 
     - if: always()
-      name: Stop MiniPlex
+      name: Stop Test Processes
       run: |
+        killall ProtoConv || true
+        killall socat || true
         killall MiniPlex || true
 
   deploy-job:
