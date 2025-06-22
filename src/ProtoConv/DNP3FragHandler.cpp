@@ -79,6 +79,7 @@ void DNP3FragHandler::HandleFrame(const Frame& frame)
 				{
 					spdlog::get("ProtoConv")->warn("DNP3FragHandler::HandleFrame(): Flow 0x{:08x}, Non-fragment frames backing up (FIR: {}, FIN: {}, SEQ: {}) with unfinished fragment Q: {}",pTxFlow->id,frame.fir,frame.fin,frame.seq,ToString(pTxFlow->frag_q));
 					Flush(pTxFlow);
+					WriteHandler(frame.pBuf,frame.len);
 				}
 				else if(!pTxFlow->frag_q.empty())
 				{
