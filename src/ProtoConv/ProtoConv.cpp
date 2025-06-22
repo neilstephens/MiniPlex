@@ -48,7 +48,7 @@ ProtoConv::ProtoConv(const CmdArgs& aArgs, asio::io_context& aIOC):
 	if(Delim != 0)
 	{
 		pFramer = std::make_shared<DelimFrameChecker>(Delim);
-		pFragHandler = std::make_shared<DelimFragHandler>(writer,IOC);
+		pFragHandler = std::make_shared<DelimFragHandler>(writer,IOC,Args.SeqMaxQ.getValue(),Args.SeqMaxTms.getValue());
 	}
 	else if(Args.FrameProtocol.getValue() == "DNP3")
 	{

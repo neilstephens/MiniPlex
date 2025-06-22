@@ -50,9 +50,11 @@ inline std::string ToString(std::priority_queue<Frame,std::deque<Frame>,FrameCmp
 class DelimFragHandler : public FragHandler
 {
 public:
-	DelimFragHandler(const std::function<void(std::shared_ptr<uint8_t> pBuf, const size_t sz)>& write_handler, asio::io_context& IOC):
+	DelimFragHandler(const std::function<void(std::shared_ptr<uint8_t> pBuf, const size_t sz)>& write_handler, asio::io_context& IOC, size_t SeqMaxQ, size_t SeqMaxTms):
 		FragHandler(write_handler),
-		strand(IOC)
+		strand(IOC),
+		SeqMaxQ(SeqMaxQ),
+		SeqMaxTms(SeqMaxTms)
 	{}
 	void HandleFrame(const Frame& frame) override
 	{
@@ -67,10 +69,26 @@ public:
 		{
 			frame_q.emplace(std::move(frame));
 
-			if(frame_q.size() > 100)//TODO: make configurable, and also make a timeout for missing frames, not just max out-of-order
+			if(frame_q.top().seq != last_top_seq)
 			{
-				spdlog::get("ProtoConv")->warn("DelimFragHandler::HandleFrame(): Too many out of sequence frames ({}), jumping ahead.",frame_q.size());
-				expected_seq = frame_q.top().seq;
+				latest_top_change = std::chrono::steady_clock::now();
+				last_top_seq = frame_q.top().seq;
+			}
+
+			if(frame_q.top().seq != expected_seq)
+			{
+				auto top_latency = std::chrono::steady_clock::now() - latest_top_change;
+				if(frame_q.size() > SeqMaxQ)
+				{
+					spdlog::get("ProtoConv")->warn("DelimFragHandler::HandleFrame(): Too many out of sequence frames ({}), jumping ahead {} -> {}.",frame_q.size(), expected_seq, frame_q.top().seq);
+					expected_seq = frame_q.top().seq;
+				}
+				else if(top_latency > std::chrono::milliseconds(SeqMaxTms))
+				{
+					auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(top_latency).count();
+					spdlog::get("ProtoConv")->warn("DelimFragHandler::HandleFrame(): Frame sequence timeout ({}ms), jumping ahead {} -> {}.", ms, expected_seq, frame_q.top().seq);
+					expected_seq = frame_q.top().seq;
+				}
 			}
 
 			while(!frame_q.empty() && frame_q.top().seq == expected_seq)
@@ -86,8 +104,12 @@ public:
 	}
 private:
 	asio::io_service::strand strand;
+	size_t SeqMaxQ;
+	size_t SeqMaxTms;
 	uint32_t expected_seq = 0;
 	std::priority_queue<Frame,std::deque<Frame>,FrameCmp> frame_q;
+	std::chrono::time_point<std::chrono::steady_clock> latest_top_change = std::chrono::steady_clock::now();
+	uint32_t last_top_seq = std::numeric_limits<uint32_t>::max();
 };
 
 #endif // DELIMFRAGHANDLER_H

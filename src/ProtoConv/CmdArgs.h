@@ -34,6 +34,8 @@ struct CmdArgs
 		SoRcvBuf("B", "so_rcvbuf", "Datagram socket receive buffer size.", false, 512L*1024, "rcv buf size"),
 		MaxWriteQSz("Q", "write_queue_size", "Max number of messages to buffer in the stream writer queue before dropping (older) data.", false, 1024, "max write queue size"),
 		Delim("D", "packet_delimiter", "Use a packet delimiter (inserted in the stream with sequence and CRC) instead of protocol framing.", false, 0, "packet delimiter"),
+		SeqMaxQ("q", "max_sequence_reorder", "Tolerance for frame re-ordering: max frames to buffer waiting for the next sequence number.", false, 100, "max out-of-order frames"),
+		SeqMaxTms("m", "max_sequence_age_ms", "Tolerance for frame re-ordering: max time (ms) to wait for the next sequence number.", false, 5000, "max out-of-order frame wait ms"),
 		TCPAddr("T", "tcphost", "If converting TCP, this is the remote IP address for the connection.", false, "", "remote tcp host"),
 		TCPisClient("C","tcpisclient", "If converting TCP, this is defines if it's a client or server connection.", false, true, "tcp is client"),
 		TCPConnectBackoffTimes("k","tcpretrytimes","Timing parameters for the tcp connection retry exponential backoff: '<MinRetryTime> <MaxRetryTime> <EstablishedResetTime>' in milliseconds", false, "125 30000 5000", "tcp connection retry times"),
@@ -67,6 +69,8 @@ struct CmdArgs
 		cmd.add(TCPConnectBackoffTimes);
 		cmd.add(TCPisClient);
 		cmd.add(TCPAddr);
+		cmd.add(SeqMaxTms);
+		cmd.add(SeqMaxQ);
 		cmd.add(Delim);
 		cmd.add(MaxWriteQSz);
 		cmd.add(SoRcvBuf);
@@ -109,6 +113,8 @@ struct CmdArgs
 	TCLAP::ValueArg<size_t> SoRcvBuf;
 	TCLAP::ValueArg<size_t> MaxWriteQSz;
 	TCLAP::ValueArg<uint32_t> Delim;
+	TCLAP::ValueArg<size_t> SeqMaxQ;
+	TCLAP::ValueArg<size_t> SeqMaxTms;
 	TCLAP::ValueArg<std::string> TCPAddr;
 	TCLAP::ValueArg<bool> TCPisClient;
 	TCLAP::ValueArg<std::string> TCPConnectBackoffTimes;

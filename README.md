@@ -19,7 +19,7 @@ USAGE:
                <milliseconds>] [--] [--version] [-h]
 
 
-Where:
+Where: 
 
    -H,  --hub
      (OR required)  Hub/Star mode: Forward datagrams from/to all endpoints.
@@ -61,7 +61,7 @@ Where:
 
    -c <console log level>,  --console_logging <console log level>
      Console log level: off, critical, error, warn, info, debug, or trace.
-     Default off.
+     Default critical.
 
    -f <file log level>,  --file_logging <file log level>
      File log level: off, critical, error, warn, info, debug, or trace.
@@ -102,17 +102,19 @@ Where:
 
    ./ProtoConv  -l <local port> [-a <local addr>] -A <remote addr> -r
                 <remote port> [-B <rcv buf size>] [-Q <max write queue
-                size>] [-D <packet delimiter>] [-T <remote tcp host>] [-C
-                <tcp is client>] [-t <remote tcp port>] [-s <serial
-                devices>] ... [-b <serial bauds rates>] ... [-L <serial
-                flow ctl settings>] ... [-Z <serial char sizes>] ... [-i
-                <serial stop bits>] ... [-p <frame protocol>] [-c <console
-                log level>] [-f <file log level>] [-F <log filename>] [-S
-                <log file size in kB>] [-N <number of log files>] [-x
+                size>] [-D <packet delimiter>] [-q <max out-of-order
+                frames>] [-m <max out-of-order frame wait ms>] [-T <remote
+                tcp host>] [-C <tcp is client>] [-k <tcp connection retry
+                times>] [-t <remote tcp port>] [-s <serial devices>] ...
+                [-b <serial bauds rates>] ... [-L <serial flow ctl
+                settings>] ... [-Z <serial char sizes>] ... [-i <serial
+                stop bits>] ... [-p <frame protocol>] [-c <console log
+                level>] [-f <file log level>] [-F <log filename>] [-S <log
+                file size in kB>] [-N <number of log files>] [-x
                 <numthreads>] [--] [--version] [-h]
 
 
-Where:
+Where: 
 
    -l <local port>,  --localport <local port>
      (required)  Local port to listen/receive datagrams on.
@@ -137,6 +139,16 @@ Where:
    -D <packet delimiter>,  --packet_delimiter <packet delimiter>
      Use a packet delimiter (inserted in the stream with sequence and CRC)
      instead of protocol framing.
+
+   -q <max out-of-order frames>,  --max_sequence_reorder <max out-of-order
+      frames>
+     Tolerance for frame re-ordering: max frames to buffer waiting for the
+     next sequence number.
+
+   -m <max out-of-order frame wait ms>,  --max_sequence_age_ms <max
+      out-of-order frame wait ms>
+     Tolerance for frame re-ordering: max time (ms) to wait for the next
+     sequence number.
 
    -T <remote tcp host>,  --tcphost <remote tcp host>
      If converting TCP, this is the remote IP address for the connection.
@@ -179,7 +191,7 @@ Where:
 
    -c <console log level>,  --console_logging <console log level>
      Console log level: off, critical, error, warn, info, debug, or trace.
-     Default off.
+     Default critical.
 
    -f <file log level>,  --file_logging <file log level>
      File log level: off, critical, error, warn, info, debug, or trace.
