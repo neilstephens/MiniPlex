@@ -53,8 +53,9 @@ public:
 					*(byte_it+1),*(byte_it+2),*(byte_it+3),*(byte_it+4),   //seq
 					*(byte_it+5),*(byte_it+6)                              //crc
 				};
-				const auto& possible_seq = *reinterpret_cast<uint32_t*>(delim_seq_crc_bytes.data()+4);
-				const auto& possible_crc = *reinterpret_cast<uint16_t*>(delim_seq_crc_bytes.data()+8);
+				uint32_t possible_seq; uint16_t possible_crc;
+				memcpy(&possible_seq, delim_seq_crc_bytes.data() + 4, sizeof(possible_seq));
+				memcpy(&possible_crc, delim_seq_crc_bytes.data() + 8, sizeof(possible_crc));
 				auto crc_should_be = crc_ccitt((uint8_t*)delim_seq_crc_bytes.data(),8);
 				if(possible_crc == crc_should_be)
 				{
