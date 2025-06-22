@@ -1,4 +1,9 @@
-# MiniPlex version 1.1.1
+# MiniPlex version 1.2.0
+
+## 1.2.0
+  * ProtoConv options for max out-of-order frames and timeout
+  * Logging efficiency bump
+  * Minor bug fixes
 
 ## 1.1.1
   * Fixed prune mode (-P) to be compatible with permanent branches (-B/-b)
