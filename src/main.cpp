@@ -63,6 +63,8 @@ try
 		t.join();
 
 	spdlog::get("MiniPlex")->info("Shutdown cleanly: return 0.");
+	spdlog::apply_all([](const std::shared_ptr<spdlog::logger>& l) {l->flush(); });
+	spdlog::drop_all();
 	spdlog::shutdown();
 	return 0;
 }

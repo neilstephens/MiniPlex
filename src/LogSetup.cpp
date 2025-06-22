@@ -23,6 +23,8 @@
 
 void setup_logs(const CmdArgs& Args)
 {
+	spdlog::init_thread_pool(4096, 1);
+
 	//these return level::off if no match
 	auto file_level = spdlog::level::from_str(Args.FileLevel.getValue());
 	auto console_level = spdlog::level::from_str(Args.ConsoleLevel.getValue());
@@ -41,9 +43,8 @@ void setup_logs(const CmdArgs& Args)
 	const std::vector<spdlog::sink_ptr> sinks = {file,console};
 
 	//finally make our logger
-	spdlog::init_thread_pool(4096, 1);
 	auto log = std::make_shared<spdlog::async_logger>("MiniPlex", sinks.begin(), sinks.end(), spdlog::thread_pool(), spdlog::async_overflow_policy::overrun_oldest);
-	log->set_level(spdlog::level::trace);
+	log->set_level(file_level < console_level ? file_level : console_level);
 	log->flush_on(spdlog::level::err);
 	spdlog::register_logger(log);
 	spdlog::flush_every(std::chrono::seconds(3));
