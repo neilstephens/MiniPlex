@@ -24,9 +24,14 @@
 #include <thread>
 #include <exception>
 #include <memory>
+#include <unistd.h>
 
 int main(int argc, char* argv[])
 {
+	#ifdef HAVE_CLOSEFROM
+	//close any inherrited file descriptors
+	closefrom(3);
+	#endif
 try
 {
 	CmdArgs Args(argc,argv);

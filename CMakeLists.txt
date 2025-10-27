@@ -61,6 +61,12 @@ if(CMAKE_USE_PTHREADS_INIT)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 endif()
 
+include(CheckFunctionExists)
+check_function_exists(closefrom HAVE_CLOSEFROM)
+if(HAVE_CLOSEFROM)
+	add_definitions(-DHAVE_CLOSEFROM)
+endif()
+
 add_definitions(-DASIO_STANDALONE)
 if(NOT EXISTS "${CMAKE_SOURCE_DIR}/src/submodules/asio/.git")
 	execute_process(COMMAND git submodule update --init -- src/submodules/asio
