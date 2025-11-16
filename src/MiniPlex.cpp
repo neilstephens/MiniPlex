@@ -29,8 +29,10 @@ MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 	socket(IOC,local_ep),
 	socket_strand(IOC),
 	process_strand(IOC),
-	EndPointCache(process_strand,Args.CacheTimeout.getValue(),[](const asio::ip::udp::endpoint& ep)
+	ActiveBranches(process_strand,Args.CacheTimeout.getValue(),[this](const asio::ip::udp::endpoint& ep)
 	{
+		if(PermaBranches.contains(ep))
+			InactivePermaBranches.insert(ep);
 		auto ep_string = ep.address().to_string()+":"+std::to_string(ep.port());
 		spdlog::get("MiniPlex")->debug("Cache entry for {} timed out.",ep_string);
 	})
@@ -65,7 +67,8 @@ MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 	for(size_t i=0; i<Args.BranchAddrs.getValue().size(); i++)
 	{
 		auto branch = asio::ip::udp::endpoint(asio::ip::address::from_string(Args.BranchAddrs.getValue()[i]),Args.BranchPorts.getValue()[i]);
-		PermaBranches.emplace_back(branch);
+		PermaBranches.insert(branch);
+		InactivePermaBranches.insert(branch);
 	}
 
 	socket_strand.post([this](){Rcv();});
@@ -117,8 +120,8 @@ void MiniPlex::RcvHandler(const asio::error_code err, const uint8_t* const buf, 
 void MiniPlex::Hub(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, const uint8_t* const buf, const size_t n)
 {
 	auto pForwardBuf = MakeSharedBuf(buf,n);
-	Forward(pForwardBuf,n,rcv_sender,PermaBranches,"fixed branches");
-	Forward(pForwardBuf,n,rcv_sender,branches,"cached branches");
+	Forward(pForwardBuf,n,rcv_sender,branches,"active branches");
+	Forward(pForwardBuf,n,rcv_sender,InactivePermaBranches,"inactive fixed branches");
 }
 
 void MiniPlex::Trunk(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, const uint8_t* const buf, const size_t n)
@@ -126,8 +129,8 @@ void MiniPlex::Trunk(const std::list<asio::ip::udp::endpoint>& branches, const a
 	auto pForwardBuf = MakeSharedBuf(buf,n);
 	if(rcv_sender == trunk)
 	{
-		Forward(pForwardBuf,n,rcv_sender,PermaBranches,"fixed branches");
-		Forward(pForwardBuf,n,rcv_sender,branches,"cached branches");
+		Forward(pForwardBuf,n,rcv_sender,branches,"active branches");
+		Forward(pForwardBuf,n,rcv_sender,InactivePermaBranches,"inactive fixed branches");
 	}
 	else
 		Forward(pForwardBuf,n,rcv_sender,std::list{trunk},"trunk");
@@ -150,7 +153,7 @@ void MiniPlex::Prune(const std::list<asio::ip::udp::endpoint>& branches, const a
 			Forward(pForwardBuf,n,rcv_sender,std::list{*branches.begin()},"active prune branch");
 	}
 	else
-		Forward(pForwardBuf,n,rcv_sender,std::list{trunk},"pruned branch");
+		Forward(pForwardBuf,n,rcv_sender,std::list{trunk},"trunk");
 }
 
 inline std::shared_ptr<uint8_t> MiniPlex::MakeSharedBuf(const uint8_t* const buf, const size_t n)
@@ -163,11 +166,11 @@ inline std::shared_ptr<uint8_t> MiniPlex::MakeSharedBuf(const uint8_t* const buf
 	return pForwardBuf;
 }
 
-void MiniPlex::Forward(
+template<typename T> void MiniPlex::Forward(
 	const std::shared_ptr<uint8_t>& pBuf,
 	const size_t size,
 	const asio::ip::udp::endpoint& sender,
-	const std::list<asio::ip::udp::endpoint>& branches,
+	const T& branches,
 	const char* desc)
 {
 	spdlog::get("MiniPlex")->trace("Forward(): sending to {} {}",branches.size(),desc);
@@ -184,10 +187,12 @@ const std::list<asio::ip::udp::endpoint>& MiniPlex::Branches(const asio::ip::udp
 {
 	if(ep != trunk)
 	{
-		auto added = EndPointCache.Add(ep);
+		auto added = ActiveBranches.Add(ep);
 		spdlog::get("MiniPlex")->trace("RcvHandler(): {} cache entry for {}",added?"Inserted":"Refreshed",sender_string);
+		if(added)
+			InactivePermaBranches.erase(ep);
 	}
-	return EndPointCache.Keys();
+	return ActiveBranches.Keys();
 }
 
 void MiniPlex::Benchmark()

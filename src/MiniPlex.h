@@ -23,6 +23,7 @@
 #include <atomic>
 #include <deque>
 #include <list>
+#include <set>
 #include <functional>
 
 struct CmdArgs;
@@ -39,11 +40,11 @@ private:
 	void Rcv();
 	void RcvHandler(const asio::error_code err, const uint8_t* const buf, const asio::ip::udp::endpoint& rcv_sender, const size_t n);
 	inline std::shared_ptr<uint8_t> MakeSharedBuf(const uint8_t* const buf, const size_t n);
-	void Forward(
+	template<typename T> void Forward(
 		const std::shared_ptr<uint8_t>& pBuf,
 		const size_t size,
 		const asio::ip::udp::endpoint& sender,
-		const std::list<asio::ip::udp::endpoint>& branches,
+		const T& branches,
 		const char* desc);
 	const std::list<asio::ip::udp::endpoint>& Branches(const asio::ip::udp::endpoint& ep, const std::string& sender_string);
 
@@ -58,8 +59,9 @@ private:
 	asio::ip::udp::socket socket;
 	asio::io_context::strand socket_strand;
 	asio::io_context::strand process_strand;
-	TimeoutCache<asio::ip::udp::endpoint> EndPointCache;
-	std::list<asio::ip::udp::endpoint> PermaBranches;
+	std::set<asio::ip::udp::endpoint> PermaBranches;
+	TimeoutCache<asio::ip::udp::endpoint> ActiveBranches;
+	std::set<asio::ip::udp::endpoint> InactivePermaBranches;
 	asio::ip::udp::endpoint trunk;
 
 	std::deque<std::shared_ptr<rbuf_t>> rcv_buf_q;
