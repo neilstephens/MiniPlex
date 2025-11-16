@@ -77,6 +77,7 @@ jobs:
         build/MiniPlex -T -p 20001 -r 127.0.0.1 -t 50000 &
         build/MiniPlex -P -p 20002 -r 127.0.0.1 -t 50000 &
         build/MiniPlex -P -p 20003 -r 127.0.0.1 -t 50000 -B 127.0.0.1 -b 50001 &
+        build/MiniPlex -T -p 20004 -r 127.0.0.1 -t 50000 -B 127.0.0.1 -b 50001 &
         socat pty,raw,echo=0,link=SerialEndpoint1 pty,raw,echo=0,link=SerialEndpoint2 &
         socat pty,raw,echo=0,link=SerialEndpoint3 pty,raw,echo=0,link=SerialEndpoint4 &
         socat pty,raw,echo=0,link=SerialEndpoint5 pty,raw,echo=0,link=SerialEndpoint6 &
@@ -104,9 +105,14 @@ jobs:
         Test/PruneMode.sh 50000 127.0.0.1 20002
 
     - if: ${{ always() && !contains(matrix.os,'windows') }}
-      name: Test Permanent Branches
+      name: Test Permanent Branches Prune
       run: |
         Test/PermanentBranches.sh 50000 50001 127.0.0.1 20003
+
+    - if: ${{ always() && !contains(matrix.os,'windows') }}
+      name: Test Permanent Branches Trunk
+      run: |
+        Test/PermanentBranchesTrunk.sh 50000 50001 127.0.0.1 20004
         
     - if: ${{ always() && !contains(matrix.os,'windows') }}
       name: Test ProtoConv Delim
