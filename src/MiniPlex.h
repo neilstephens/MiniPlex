@@ -20,10 +20,10 @@
 
 #include "TimeoutCache.h"
 #include <asio.hpp>
-#include <string>
 #include <atomic>
 #include <deque>
 #include <list>
+#include <functional>
 
 struct CmdArgs;
 
@@ -38,6 +38,19 @@ private:
 
 	void Rcv();
 	void RcvHandler(const asio::error_code err, const uint8_t* const buf, const asio::ip::udp::endpoint& rcv_sender, const size_t n);
+	inline std::shared_ptr<uint8_t> MakeSharedBuf(const uint8_t* const buf, const size_t n);
+	void Forward(
+		const std::shared_ptr<uint8_t>& pBuf,
+		const size_t size,
+		const asio::ip::udp::endpoint& sender,
+		const std::list<asio::ip::udp::endpoint>& branches,
+		const char* desc);
+	const std::list<asio::ip::udp::endpoint>& Branches(const asio::ip::udp::endpoint& ep, const std::string& sender_string);
+
+	void Hub(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, const uint8_t* const buf, const size_t n);
+	void Trunk(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, const uint8_t* const buf, const size_t n);
+	void Prune(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, const uint8_t* const buf, const size_t n);
+	std::function<void(const std::list<asio::ip::udp::endpoint>&, const asio::ip::udp::endpoint&, const uint8_t* const, const size_t)> ModeHandler;
 
 	const CmdArgs& Args;
 	asio::io_context& IOC;
