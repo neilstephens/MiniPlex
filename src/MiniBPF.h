@@ -34,13 +34,23 @@
 namespace MiniBPF {
 
 // eBPF instruction format (64-bit) - matches actual eBPF
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#endif
 struct Instruction {
 		uint8_t opcode;
 		uint8_t dst_reg : 4;
 		uint8_t src_reg : 4;
 		int16_t offset;
 		int32_t imm;
-} __attribute__((packed));
+}
+#ifdef __GNUC__
+__attribute__((packed))
+#endif
+;
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif
 
 static_assert(sizeof(Instruction) == 8, "Instruction must be 8 bytes");
 

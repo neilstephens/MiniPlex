@@ -5,6 +5,7 @@
     * Provide packet inspection byte-code to get payload addressing,
     * and MiniPlex can route packets to branches based on src/dst.
     * Included DNP3 example src/SwitchDNP3.s -> switch.bpf
+  * Fixed duplicate forwarding in Trunk/Hub with fixed branches
 
 ## 1.2.0
   * ProtoConv options for max out-of-order frames and timeout
