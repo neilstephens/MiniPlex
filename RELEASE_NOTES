@@ -1,4 +1,10 @@
-# MiniPlex version 1.2.0
+# MiniPlex version 1.3.0-RC1
+
+## 1.3.0-RC1
+  * MiniPlex 'Switch' mode
+    * Provide packet inspection byte-code to get payload addressing,
+    * and MiniPlex can route packets to branches based on src/dst.
+    * Included DNP3 example src/SwitchDNP3.s -> switch.bpf
 
 ## 1.2.0
   * ProtoConv options for max out-of-order frames and timeout

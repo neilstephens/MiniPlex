@@ -19,11 +19,13 @@
 #define MINIPLEX_H
 
 #include "TimeoutCache.h"
+#include "MiniBPF.h"
 #include <asio.hpp>
 #include <atomic>
 #include <deque>
 #include <list>
 #include <set>
+#include <tuple>
 #include <functional>
 
 struct CmdArgs;
@@ -46,11 +48,14 @@ private:
 		const asio::ip::udp::endpoint& sender,
 		const T& branches,
 		const char* desc);
-	const std::list<asio::ip::udp::endpoint>& Branches(const asio::ip::udp::endpoint& ep, const std::string& sender_string);
+	const std::list<asio::ip::udp::endpoint>& Branches(const asio::ip::udp::endpoint& ep);
+	const std::list<asio::ip::udp::endpoint>& AddressBranches(const asio::ip::udp::endpoint& ep, const uint64_t addr, const bool associate = false);
+	std::tuple<bool,uint64_t,uint64_t> GetSrcDst(const uint8_t* const buf, const size_t n);
 
 	void Hub(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, const uint8_t* const buf, const size_t n);
 	void Trunk(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, const uint8_t* const buf, const size_t n);
 	void Prune(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, const uint8_t* const buf, const size_t n);
+	void Switch(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, const uint8_t* const buf, const size_t n);
 	std::function<void(const std::list<asio::ip::udp::endpoint>&, const asio::ip::udp::endpoint&, const uint8_t* const, const size_t)> ModeHandler;
 
 	const CmdArgs& Args;
@@ -61,6 +66,8 @@ private:
 	asio::io_context::strand process_strand;
 	std::set<asio::ip::udp::endpoint> PermaBranches;
 	TimeoutCache<asio::ip::udp::endpoint> ActiveBranches;
+	std::unordered_map<uint64_t,TimeoutCache<asio::ip::udp::endpoint>> AddrBranches;
+	MiniBPF::VM AddrVM;
 	std::set<asio::ip::udp::endpoint> InactivePermaBranches;
 	asio::ip::udp::endpoint trunk;
 

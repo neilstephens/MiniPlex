@@ -11,18 +11,19 @@ ProtoConv: Protocol adapter to convert between a stream and datagrams.
 
 USAGE: 
 
-   ./MiniPlex  {-H|-T|-P} -p <port> [-l <localaddr>] [-Z <rcv buf size>]
-               [-o <timeout>] [-r <trunkhost>] [-t <trunkport>] [-B
-               <branchhost>] ... [-b <branchport>] ... [-c <console log
-               level>] [-f <file log level>] [-F <log filename>] [-S <size
-               in kB>] [-N <number of files>] [-x <numthreads>] [-M] [-m
-               <milliseconds>] [--] [--version] [-h]
+   ./MiniPlex  {-H|-T|-P|-X} -p <port> [-l <localaddr>] [-Z <rcv buf size>]
+               [-o <timeout>] [-r <trunk host>] [-t <trunk port>] [-B
+               <branch host>] ... [-b <branch port>] ... [-C <switchmode
+               bytecode file>] [-c <console log level>] [-f <file log
+               level>] [-F <log filename>] [-S <size in kB>] [-N <number of
+               files>] [-x <num threads>] [-M] [-m <milliseconds>] [--]
+               [--version] [-h]
 
 
 Where: 
 
    -H,  --hub
-     (OR required)  Hub/Star mode: Forward datagrams from/to all endpoints.
+     (OR required)  Hub mode: Forward datagrams from/to all endpoints.
          -- OR --
    -T,  --trunk
      (OR required)  Trunk mode: Forward frames from a 'trunk' to other
@@ -31,6 +32,10 @@ Where:
    -P,  --prune
      (OR required)  Like Trunk mode, but limits flow to one (first in best
      dressed) branch
+         -- OR --
+   -X,  --switch
+     (OR required)  Switch mode: forward datagrams based on application
+     addresses.
 
 
    -p <port>,  --port <port>
@@ -45,19 +50,27 @@ Where:
    -o <timeout>,  --timeout <timeout>
      Milliseconds to keep an idle endpoint cached
 
-   -r <trunkhost>,  --trunk_ip <trunkhost>
+   -r <trunk host>,  --trunk_ip <trunk host>
      Remote trunk ip address.
 
-   -t <trunkport>,  --trunk_port <trunkport>
+   -t <trunk port>,  --trunk_port <trunk port>
      Remote trunk port.
 
-   -B <branchhost>,  --branch_ip <branchhost>  (accepted multiple times)
+   -B <branch host>,  --branch_ip <branch host>  (accepted multiple times)
      Remote endpoint addresses to permanently cache. Use -b to provide
      respective ports in the same order.
 
-   -b <branchport>,  --branch_port <branchport>  (accepted multiple times)
+   -b <branch port>,  --branch_port <branch port>  (accepted multiple
+      times)
      Remote endpoint port to permanently cache. Use -B to provide
      respective addresses in the same order.
+
+   -C <switchmode bytecode file>,  --byte_code <switchmode bytecode file>
+     eBPF (subset) byte code file. Switch mode code for extracting src and
+     dst addrs from packet data.
+
+     Pre-conditions: r0 = &buf, r1 = buf_size. Post-execution: result = r0
+     (success==0), src = r2, dst = r3.
 
    -c <console log level>,  --console_logging <console log level>
      Console log level: off, critical, error, warn, info, debug, or trace.
@@ -76,7 +89,7 @@ Where:
    -N <number of files>,  --log_num <number of files>
      Keep this many log files when rolling the log. Defaults to 3
 
-   -x <numthreads>,  --concurrency <numthreads>
+   -x <num threads>,  --concurrency <num threads>
      A hint for the number of threads in thread pool. Defaults to detected
      hardware concurrency.
 

@@ -55,6 +55,23 @@ MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 		spdlog::get("MiniPlex")->info("Operating in Prune mode.");
 		ModeHandler = std::bind(&MiniPlex::Prune,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3,std::placeholders::_4);
 	}
+	else if(Args.Switch)
+	{
+		spdlog::get("MiniPlex")->info("Operating in Switch mode.");
+		ModeHandler = std::bind(&MiniPlex::Switch,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3,std::placeholders::_4);
+		try
+		{
+			AddrVM.load(Args.ByteCodeFile.getValue());
+			std::ostringstream oss;
+			if(!AddrVM.validate(oss))
+				throw std::runtime_error("Validation failed: "+oss.str());
+		}
+		catch (const std::exception& e)
+		{
+			spdlog::get("MiniPlex")->critical("Switch mode eBPF VM load/validate error: {}",e.what());
+			throw std::exception(e);
+		}
+	}
 	else
 		throw std::runtime_error("Mode error");
 
@@ -110,10 +127,13 @@ void MiniPlex::RcvHandler(const asio::error_code err, const uint8_t* const buf, 
 		spdlog::get("MiniPlex")->error("RcvHandler(): error code {}: '{}'",err.value(),err.message());
 		return;
 	}
-	auto sender_string = rcv_sender.address().to_string()+":"+std::to_string(rcv_sender.port());
-	spdlog::get("MiniPlex")->trace("RcvHandler(): {} bytes from {}",n,sender_string);
+	if(spdlog::get("MiniPlex")->should_log(spdlog::level::trace))
+	{
+		auto sender_string = rcv_sender.address().to_string()+":"+std::to_string(rcv_sender.port());
+		spdlog::get("MiniPlex")->trace("RcvHandler(): {} bytes from {}",n,sender_string);
+	}
 
-	const auto& branches = Branches(rcv_sender, sender_string);
+	const auto& branches = Branches(rcv_sender);
 	ModeHandler(branches,rcv_sender,buf,n);
 }
 
@@ -141,7 +161,7 @@ void MiniPlex::Prune(const std::list<asio::ip::udp::endpoint>& branches, const a
 	if(rcv_sender != trunk && !branches.empty() && rcv_sender != *branches.begin())
 	{
 		auto sender_string = rcv_sender.address().to_string()+":"+std::to_string(rcv_sender.port());
-		spdlog::get("MiniPlex")->debug("RcvHandler(): pruned packet from branch {}",sender_string);
+		spdlog::get("MiniPlex")->debug("Prune(): pruned packet from branch {}",sender_string);
 		return;
 	}
 	auto pForwardBuf = MakeSharedBuf(buf,n);
@@ -154,6 +174,62 @@ void MiniPlex::Prune(const std::list<asio::ip::udp::endpoint>& branches, const a
 	}
 	else
 		Forward(pForwardBuf,n,rcv_sender,std::list{trunk},"trunk");
+}
+
+void MiniPlex::Switch(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, const uint8_t* const buf, const size_t n)
+{
+	auto [success,src,dst] = GetSrcDst(buf,n);
+	if(!success)
+	{
+		auto sender_string = rcv_sender.address().to_string()+":"+std::to_string(rcv_sender.port());
+		spdlog::get("MiniPlex")->error("Switch(): Failed to get packet addresses. Branch {}.",sender_string);
+		return;
+	}
+
+	//Get any active branches for src and dst
+	// and make sure the sender branch is associated with src addr
+	const auto& src_branches = AddressBranches(rcv_sender,src,true);
+	const auto& dst_branches = AddressBranches(rcv_sender,dst);
+
+	//Only accept packets for a src address if it's on the active branch for that addr
+	const auto& active_src_branch = *src_branches.begin();
+	if(active_src_branch != rcv_sender)
+	{
+		auto sender_string = rcv_sender.address().to_string()+":"+std::to_string(rcv_sender.port());
+		spdlog::get("MiniPlex")->debug("Switch(): dropped packet from branch {} - another branch is active for src addr ({})",sender_string,src);
+		return;
+	}
+
+	auto pForwardBuf = MakeSharedBuf(buf,n);
+
+	//Check if there's an active branch for the dst addr
+	if(dst_branches.empty())
+	{
+		//No active branch for that addr - broadcast it to all
+		Forward(pForwardBuf,n,rcv_sender,branches,"active branches");
+		Forward(pForwardBuf,n,rcv_sender,InactivePermaBranches,"inactive fixed branches");
+		return;
+	}
+	//Otherwise just send it to the active associated branch
+	Forward(pForwardBuf,n,rcv_sender,std::list{*dst_branches.begin()},"active address branch");
+}
+
+//returns: success, src, dst
+std::tuple<bool,uint64_t,uint64_t> MiniPlex::GetSrcDst(const uint8_t* const buf, const size_t n)
+{
+	AddrVM.set_memory_context(buf,n);
+	AddrVM.set_register(0,0);//r0=buf;
+	AddrVM.set_register(1,n);//r1=n;
+	try
+	{
+		AddrVM.execute();
+	}
+	catch(const std::exception& e)
+	{
+		spdlog::get("MiniPlex")->error("GetSrcDst(): eBPF VM execution error: {}",e.what());
+		return {false,0,0};
+	}
+	return {AddrVM.get_register(0)==0,AddrVM.get_register(2),AddrVM.get_register(3)};
 }
 
 inline std::shared_ptr<uint8_t> MiniPlex::MakeSharedBuf(const uint8_t* const buf, const size_t n)
@@ -183,16 +259,56 @@ template<typename T> void MiniPlex::Forward(
 }
 
 //Cache or refresh given branch endpoint, and return the list
-const std::list<asio::ip::udp::endpoint>& MiniPlex::Branches(const asio::ip::udp::endpoint& ep, const std::string& sender_string)
+const std::list<asio::ip::udp::endpoint>& MiniPlex::Branches(const asio::ip::udp::endpoint& ep)
 {
 	if(ep != trunk)
 	{
 		auto added = ActiveBranches.Add(ep);
-		spdlog::get("MiniPlex")->trace("RcvHandler(): {} cache entry for {}",added?"Inserted":"Refreshed",sender_string);
 		if(added)
+		{
 			InactivePermaBranches.erase(ep);
+			auto ep_string = ep.address().to_string()+":"+std::to_string(ep.port());
+			spdlog::get("MiniPlex")->debug("Branches(): New cache entry for {}",ep_string);
+		}
+		else if(spdlog::get("MiniPlex")->should_log(spdlog::level::trace))
+		{
+			auto ep_string = ep.address().to_string()+":"+std::to_string(ep.port());
+			spdlog::get("MiniPlex")->trace("Branches(): Refreshed cache entry for {}",ep_string);
+		}
 	}
 	return ActiveBranches.Keys();
+}
+
+//Cache or refresh given branch endpoint, and return the list
+const std::list<asio::ip::udp::endpoint>& MiniPlex::AddressBranches(const asio::ip::udp::endpoint& ep, const uint64_t addr, const bool associate)
+{
+	//Add cache for address if it doesn't already exist
+	if(!AddrBranches.contains(addr))
+	{
+		AddrBranches.emplace(addr,TimeoutCache<asio::ip::udp::endpoint>(process_strand,Args.CacheTimeout.getValue(),[addr](const asio::ip::udp::endpoint& cache_ep)
+		{
+			auto ep_string = cache_ep.address().to_string()+":"+std::to_string(cache_ep.port());
+			spdlog::get("MiniPlex")->debug("Address ({}) cache timeout for branch {}.",addr,ep_string);
+		}));
+	}
+
+	//optionally associate the branch with the address
+	if(associate)
+	{
+		auto added = AddrBranches.at(addr).Add(ep);
+		if(added)
+		{
+			auto ep_string = ep.address().to_string()+":"+std::to_string(ep.port());
+			spdlog::get("MiniPlex")->debug("AddressBranches(): New branch ({}) for address {}", ep_string, addr);
+		}
+		else if(spdlog::get("MiniPlex")->should_log(spdlog::level::trace))
+		{
+			auto ep_string = ep.address().to_string()+":"+std::to_string(ep.port());
+			spdlog::get("MiniPlex")->trace("AddressBranches(): Refreshed branch ({}) for address {}", ep_string, addr);
+		}
+	}
+
+	return AddrBranches.at(addr).Keys();
 }
 
 void MiniPlex::Benchmark()
