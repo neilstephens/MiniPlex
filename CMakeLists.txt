@@ -10,7 +10,7 @@ if(NOT WIN32)
 endif()
 
 project(MiniPlex LANGUAGES CXX)
-add_definitions(-DMP_VERSION="1.3.0")
+add_definitions(-DMP_VERSION="1.3.0-RC2")
 
 file(GLOB ${PROJECT_NAME}_SRC src/*.cpp src/*.h)
 
@@ -18,11 +18,12 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF) #Eg. -std=c++20 instead of -std=gnu++20
 
-install(FILES "LICENSE.txt" DESTINATION ".")
-install(FILES "NOTICE.txt" DESTINATION ".")
+install(FILES "LICENSE" DESTINATION ".")
+install(FILES "NOTICE" DESTINATION ".")
 install(FILES "README.md" DESTINATION ".")
 install(FILES "RELEASE_NOTES" DESTINATION ".")
 install(DIRECTORY "./3rdPartyLicenses" DESTINATION ".")
+install(DIRECTORY "./Examples" DESTINATION ".")
 
 # Platform configuration
 if(WIN32)

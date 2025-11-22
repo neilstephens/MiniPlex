@@ -58,6 +58,7 @@ jobs:
           README.md
           RELEASE_NOTES
           3rdPartyLicenses/LICENSE_1_0.txt
+          Examples/**
           
     - if: always() && contains(matrix.os,'macos')
       name: Mac Cats
@@ -186,6 +187,7 @@ jobs:
           README.md
           RELEASE_NOTES
           3rdPartyLicenses/LICENSE_1_0.txt
+          Examples/**
           
     - if: always()
       name: Linux Cats
