@@ -35,7 +35,8 @@ MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 			InactivePermaBranches.insert(ep);
 		auto ep_string = ep.address().to_string()+":"+std::to_string(ep.port());
 		spdlog::get("MiniPlex")->debug("Cache entry for {} timed out.",ep_string);
-	})
+	}),
+	AddrVM(4096)
 {
 	asio::socket_base::receive_buffer_size option(Args.SoRcvBuf.getValue());
 	socket.set_option(option);
@@ -61,14 +62,11 @@ MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 		ModeHandler = std::bind(&MiniPlex::Switch,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3,std::placeholders::_4);
 		try
 		{
-			AddrVM.load(Args.ByteCodeFile.getValue());
-			std::ostringstream oss;
-			if(!AddrVM.validate(oss))
-				throw std::runtime_error("Validation failed: "+oss.str());
+			AddrVM.program_load(Args.ByteCodeFile.getValue());
 		}
 		catch (const std::exception& e)
 		{
-			spdlog::get("MiniPlex")->critical("Switch mode eBPF VM load/validate error: {}",e.what());
+			spdlog::get("MiniPlex")->critical("Switch mode VM load/validate error: {}",e.what());
 			throw std::exception(e);
 		}
 	}
@@ -120,7 +118,7 @@ void MiniPlex::Rcv()
 	}));
 }
 
-void MiniPlex::RcvHandler(const asio::error_code err, const uint8_t* const buf, const asio::ip::udp::endpoint& rcv_sender, const size_t n)
+void MiniPlex::RcvHandler(const asio::error_code err, uint8_t* buf, const asio::ip::udp::endpoint& rcv_sender, const size_t n)
 {
 	if(err)
 	{
@@ -137,14 +135,14 @@ void MiniPlex::RcvHandler(const asio::error_code err, const uint8_t* const buf, 
 	ModeHandler(branches,rcv_sender,buf,n);
 }
 
-void MiniPlex::Hub(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, const uint8_t* const buf, const size_t n)
+void MiniPlex::Hub(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, uint8_t* buf, const size_t n)
 {
 	auto pForwardBuf = MakeSharedBuf(buf,n);
 	Forward(pForwardBuf,n,rcv_sender,branches,"active branches");
 	Forward(pForwardBuf,n,rcv_sender,InactivePermaBranches,"inactive fixed branches");
 }
 
-void MiniPlex::Trunk(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, const uint8_t* const buf, const size_t n)
+void MiniPlex::Trunk(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, uint8_t* buf, const size_t n)
 {
 	auto pForwardBuf = MakeSharedBuf(buf,n);
 	if(rcv_sender == trunk)
@@ -156,7 +154,7 @@ void MiniPlex::Trunk(const std::list<asio::ip::udp::endpoint>& branches, const a
 		Forward(pForwardBuf,n,rcv_sender,std::list{trunk},"trunk");
 }
 
-void MiniPlex::Prune(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, const uint8_t* const buf, const size_t n)
+void MiniPlex::Prune(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, uint8_t* buf, const size_t n)
 {
 	if(rcv_sender != trunk && !branches.empty() && rcv_sender != *branches.begin())
 	{
@@ -176,7 +174,7 @@ void MiniPlex::Prune(const std::list<asio::ip::udp::endpoint>& branches, const a
 		Forward(pForwardBuf,n,rcv_sender,std::list{trunk},"trunk");
 }
 
-void MiniPlex::Switch(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, const uint8_t* const buf, const size_t n)
+void MiniPlex::Switch(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, uint8_t* buf, const size_t n)
 {
 	auto [success,src,dst] = GetSrcDst(buf,n);
 	if(!success)
@@ -215,21 +213,25 @@ void MiniPlex::Switch(const std::list<asio::ip::udp::endpoint>& branches, const 
 }
 
 //returns: success, src, dst
-std::tuple<bool,uint64_t,uint64_t> MiniPlex::GetSrcDst(const uint8_t* const buf, const size_t n)
+std::tuple<bool,uint64_t,uint64_t> MiniPlex::GetSrcDst(uint8_t* buf, const size_t n)
 {
-	AddrVM.set_memory_context(buf,n);
-	AddrVM.set_register(0,0);//r0=buf;
-	AddrVM.set_register(1,n);//r1=n;
 	try
 	{
-		AddrVM.execute();
+		auto virt_buf = AddrVM.map_data_mem(buf,n);
+		auto src_addr = AddrVM.stack_push<uint64_t>(0);
+		auto dst_addr = AddrVM.stack_push<uint64_t>(0);
+		AddrVM.register_set(10,virt_buf); //a0=&buf;
+		AddrVM.register_set(11,n);        //a1=n;
+		AddrVM.register_set(12,src_addr); //a2=&src;
+		AddrVM.register_set(13,dst_addr); //a3=&dst;
+		AddrVM.execute_program();
+		auto res = AddrVM.register_get(10);
+		auto dst = AddrVM.stack_pop<uint64_t>();
+		auto src = AddrVM.stack_pop<uint64_t>();
+		return {res==0,src,dst};
 	}
-	catch(const std::exception& e)
-	{
-		spdlog::get("MiniPlex")->error("GetSrcDst(): eBPF VM execution error: {}",e.what());
-		return {false,0,0};
-	}
-	return {AddrVM.get_register(0)==0,AddrVM.get_register(2),AddrVM.get_register(3)};
+	catch(const std::exception& e) { spdlog::get("MiniPlex")->error("GetSrcDst(): VM execution error: {}",e.what()); }
+	return {false,0,0};
 }
 
 inline std::shared_ptr<uint8_t> MiniPlex::MakeSharedBuf(const uint8_t* const buf, const size_t n)

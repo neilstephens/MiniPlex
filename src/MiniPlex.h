@@ -19,7 +19,7 @@
 #define MINIPLEX_H
 
 #include "TimeoutCache.h"
-#include "MiniBPF.h"
+#include "TinyRISCV64.h"
 #include <asio.hpp>
 #include <atomic>
 #include <deque>
@@ -40,7 +40,7 @@ private:
 	using rbuf_t = std::array<uint8_t, 64L * 1024>;
 
 	void Rcv();
-	void RcvHandler(const asio::error_code err, const uint8_t* const buf, const asio::ip::udp::endpoint& rcv_sender, const size_t n);
+	void RcvHandler(const asio::error_code err, uint8_t* buf, const asio::ip::udp::endpoint& rcv_sender, const size_t n);
 	inline std::shared_ptr<uint8_t> MakeSharedBuf(const uint8_t* const buf, const size_t n);
 	template<typename T> void Forward(
 		const std::shared_ptr<uint8_t>& pBuf,
@@ -50,13 +50,13 @@ private:
 		const char* desc);
 	const std::list<asio::ip::udp::endpoint>& Branches(const asio::ip::udp::endpoint& ep);
 	const std::list<asio::ip::udp::endpoint>& AddressBranches(const asio::ip::udp::endpoint& ep, const uint64_t addr, const bool associate = false);
-	std::tuple<bool,uint64_t,uint64_t> GetSrcDst(const uint8_t* const buf, const size_t n);
+	std::tuple<bool,uint64_t,uint64_t> GetSrcDst(uint8_t* buf, const size_t n);
 
-	void Hub(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, const uint8_t* const buf, const size_t n);
-	void Trunk(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, const uint8_t* const buf, const size_t n);
-	void Prune(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, const uint8_t* const buf, const size_t n);
-	void Switch(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, const uint8_t* const buf, const size_t n);
-	std::function<void(const std::list<asio::ip::udp::endpoint>&, const asio::ip::udp::endpoint&, const uint8_t* const, const size_t)> ModeHandler;
+	void Hub(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, uint8_t* buf, const size_t n);
+	void Trunk(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, uint8_t* buf, const size_t n);
+	void Prune(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, uint8_t* buf, const size_t n);
+	void Switch(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, uint8_t* buf, const size_t n);
+	std::function<void(const std::list<asio::ip::udp::endpoint>&, const asio::ip::udp::endpoint&, uint8_t*, const size_t)> ModeHandler;
 
 	const CmdArgs& Args;
 	asio::io_context& IOC;
@@ -67,7 +67,7 @@ private:
 	std::set<asio::ip::udp::endpoint> PermaBranches;
 	TimeoutCache<asio::ip::udp::endpoint> ActiveBranches;
 	std::unordered_map<uint64_t,TimeoutCache<asio::ip::udp::endpoint>> AddrBranches;
-	MiniBPF::VM AddrVM;
+	TinyRISCV64::VM AddrVM;
 	std::set<asio::ip::udp::endpoint> InactivePermaBranches;
 	asio::ip::udp::endpoint trunk;
 

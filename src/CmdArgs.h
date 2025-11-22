@@ -39,8 +39,9 @@ struct CmdArgs
 		TrunkPort("t", "trunk_port", "Remote trunk port.", false, 0, "trunk port"),
 		BranchAddrs("B", "branch_ip", "Remote endpoint addresses to permanently cache. Use -b to provide respective ports in the same order.", false, "branch host"),
 		BranchPorts("b", "branch_port", "Remote endpoint port to permanently cache. Use -B to provide respective addresses in the same order.", false, "branch port"),
-		ByteCodeFile("C", "byte_code", "eBPF (subset) byte code file. Switch mode code for extracting src and dst addrs from packet data.\n"
-							 "Pre-conditions: r0 = &buf, r1 = buf_size. Post-execution: result = r0 (success==0), src = r2, dst = r3.", false, "switch.bpf", "switchmode bytecode file"),
+		ByteCodeFile("C", "byte_code", "RV64IM RISC-V byte code file. Switch mode code for extracting src and dst addrs from packet data.\n"
+							 "Pre-conditions: a0=&buf, a1=buf_size, a2=&src, a3=&dst. Post-execution: result = a0 (success result==0, src/dst have been written).",
+				 false, "switch.bin", "switchmode bytecode file"),
 		ConsoleLevel("c", "console_logging", "Console log level: off, critical, error, warn, info, debug, or trace. Default critical.", false, "critical", "console log level"),
 		FileLevel("f", "file_logging", "File log level: off, critical, error, warn, info, debug, or trace. Default error.", false, "error", "file log level"),
 		LogFile("F", "log_file", "Log filename. Defaults to ./MiniPlex.log", false, "MiniPlex.log", "log filename"),

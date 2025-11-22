@@ -66,11 +66,12 @@ Where:
      respective addresses in the same order.
 
    -C <switchmode bytecode file>,  --byte_code <switchmode bytecode file>
-     eBPF (subset) byte code file. Switch mode code for extracting src and
+     RV64IM RISC-V byte code file. Switch mode code for extracting src and
      dst addrs from packet data.
 
-     Pre-conditions: r0 = &buf, r1 = buf_size. Post-execution: result = r0
-     (success==0), src = r2, dst = r3.
+     Pre-conditions: a0=&buf, a1=buf_size, a2=&src, a3=&dst.
+     Post-execution: result = a0 (success result==0, src/dst have been
+     written).
 
    -c <console log level>,  --console_logging <console log level>
      Console log level: off, critical, error, warn, info, debug, or trace.
@@ -263,6 +264,10 @@ On the branch hosts (192.168.1.5 and 192.168.1.6 in this example) run vlc to rec
 ```
 vlc udp://@:1234
 ```
+
+### UDP Switch
+
+See [these examples](Examples/SwitchBytecode/README.md) for how to use MiniPlex as a layer 4 UDP switch! 
 
 ## Build
 
