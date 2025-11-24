@@ -1,10 +1,10 @@
-# MiniPlex version 1.3.0-RC1
+# MiniPlex version 1.3.0-RC2
 
-## 1.3.0-RC1
+## 1.3.0-RC2
   * MiniPlex 'Switch' mode
-    * Provide packet inspection byte-code to get payload addressing,
+    * Provide packet inspection byte-code (RV64IM) to get payload addressing,
     * and MiniPlex can route packets to branches based on src/dst.
-    * Included DNP3 example src/SwitchDNP3.s -> switch.bpf
+    * Included DNP3 + VXLAN examples
   * Fixed duplicate forwarding in Trunk/Hub with fixed branches
 
 ## 1.2.0

@@ -392,31 +392,30 @@ private:
 			case 0x007: x[rd] = x[rs1] & x[rs2]; break;                                               // AND
 
 			// M extension
-			case 0x008: x[rd] = x[rs1] * x[rs2]; break; // MUL
-			case 0x009: x[rd] = (static_cast<i128>(static_cast<i64>(x[rs1])) *
-						   static_cast<i128>(static_cast<i64>(x[rs2]))) >> 64; break; // MULH
-			case 0x00a: x[rd] = (static_cast<i128>(static_cast<i64>(x[rs1])) *
-						   static_cast<u128>(x[rs2])) >> 64; break; // MULHSU
-			case 0x00b: x[rd] = (static_cast<u128>(x[rs1]) *
-						   static_cast<u128>(x[rs2])) >> 64; break; // MULHU
+			case 0x008: x[rd] = x[rs1] * x[rs2]; break;                                               // MUL
+			case 0x009: x[rd] = mulh(x[rs1],x[rs2]); break;                                           // MULH
+			case 0x00a: x[rd] = mulhsu(x[rs1],x[rs2]); break;                                         // MULHSU
+			case 0x00b: x[rd] = mulhu(x[rs1],x[rs2]); break;                                          // MULHU
 			case 0x00c: // DIV
 				if (x[rs2]) x[rd] = (static_cast<i64>(x[rs1]) == INT64_MIN && static_cast<i64>(x[rs2]) == -1)
 							  ? static_cast<u64>(INT64_MIN)
 							  : static_cast<u64>(static_cast<i64>(x[rs1]) / static_cast<i64>(x[rs2]));
-				else x[rd] = -1ULL; //TODO: check if this is the correct divide by zero behaviour
+				else x[rd] = 0xFFFFFFFFFFFFFFFFULL;
 				break;
 			case 0x00d: // DIVU
 				if (x[rs2]) x[rd] = x[rs1] / x[rs2];
-				else x[rd] = -1ULL; //TODO: check if this is the correct divide by zero behaviour
+				else x[rd] = 0xFFFFFFFFFFFFFFFFULL;
 				break;
-			case 0x00e:
-				if (x[rs2]) x[rd] = static_cast<u64>(static_cast<i64>(x[rs1]) % static_cast<i64>(x[rs2]));
+			case 0x00e: // REM
+				if (x[rs2]) x[rd] = (static_cast<i64>(x[rs1]) == INT64_MIN && static_cast<i64>(x[rs2]) == -1)
+							  ? 0ULL
+							  : static_cast<u64>(static_cast<i64>(x[rs1]) % static_cast<i64>(x[rs2]));
 				else x[rd] = x[rs1];
-				break; // REM
-			case 0x00f:
+				break;
+			case 0x00f: // REMU
 				if (x[rs2]) x[rd] = x[rs1] % x[rs2];
 				else x[rd] = x[rs1];
-				break; // REMU
+				break;
 			default: throw std::invalid_argument("Unknown alu_reg operation");
 		}
 	}
@@ -461,36 +460,69 @@ private:
 		x[rd] = static_cast<i64>(result); // Sign-extend to 64 bits
 	}
 
-	// For 128-bit multiplication on platforms without __int128
+	// For 128-bit multiplication - TODO: use platform intrinsics (_umul128 on MSVC and __int128 specifically for GCC/Clang)
 	#if defined(__SIZEOF_INT128__)
-	using i128 = __int128;
-	using u128 = unsigned __int128;
+	using i128 = __int128; using u128 = unsigned __int128;
+	static inline uint64_t mulh(i64 a, i64 b) { return (static_cast<i128>(a) * static_cast<i128>(b)) >> 64; }
+	static inline uint64_t mulhu(u64 a, u64 b) { return (static_cast<u128>(a) * static_cast<u128>(b)) >> 64; }
+	static inline uint64_t mulhsu(i64 a, u64 b) { return (static_cast<i128>(a) * static_cast<u128>(b)) >> 64; }
 	#else
-	//FIXME: provide emulation below instead of throwing
-	struct i128
+	//Provide emulation on platforms without __int128
+	static inline std::pair<u64,u64> mulu64_128(u64 a, u64 b)
 	{
-		operator u64() const { throw std::invalid_argument("missing i128 support on this platform"); }
-	};
-	struct u128
-	{
-		operator u64() const { throw std::invalid_argument("missing i128 support on this platform"); }
-	};
-	inline i128 operator*(i128 a, i128 b)
-	{
-		throw std::invalid_argument("missing i128 support on this platform");
+		constexpr u64 TRUNC32 = 0xFFFFFFFFULL;
+		const u64 a_lo = a & TRUNC32;
+		const u64 a_hi = a >> 32;
+		const u64 b_lo = b & TRUNC32;
+		const u64 b_hi = b >> 32;
+
+		u64 p0 = a_lo * b_lo;
+		u64 p1 = a_lo * b_hi;
+		u64 p2 = a_hi * b_lo;
+		u64 p3 = a_hi * b_hi;
+
+		u64 mid = (p0 >> 32) + (p1 & TRUNC32) + (p2 & TRUNC32);
+		u64 lo = (p0 & TRUNC32) | (mid << 32);
+		u64 hi = p3 + (p1 >> 32) + (p2 >> 32) + (mid >> 32);
+
+		return {hi, lo};
 	}
-	inline u128 operator*(u128 a, u128 b)
+	static inline i64 mulh(i64 a, i64 b)
 	{
-		throw std::invalid_argument("missing i128 support on this platform");
+		bool neg = (a < 0) ^ (b < 0);
+		u64 abs_a = (a < 0) ? (0ULL - static_cast<u64>(a)) : static_cast<u64>(a);
+		u64 abs_b = (b < 0) ? (0ULL - static_cast<u64>(b)) : static_cast<u64>(b);
+
+		auto [hi, lo] = mulu64_128(abs_a, abs_b);
+
+		if (neg) //2's compliment
+		{
+			hi = ~hi;
+			lo = ~lo;
+			lo += 1;
+			if (lo == 0) ++hi;
+		}
+		return static_cast<i64>(hi);
 	}
-	inline i128 operator>>(i128 a, int b)
+	static inline i64 mulhsu(i64 a, u64 b)
 	{
-		throw std::invalid_argument("missing i128 support on this platform");
+		if(a < 0)
+		{
+			u64 abs_a = 0ULL - static_cast<u64>(a);
+
+			auto [hi, lo] = mulu64_128(abs_a, b);
+
+			//2's compliment
+			hi = ~hi;
+			lo = ~lo;
+			lo += 1;
+			if (lo == 0) ++hi;
+
+			return static_cast<i64>(hi);
+		}
+		return mulu64_128(static_cast<u64>(a),b).first;
 	}
-	inline u128 operator>>(u128 a, int b)
-	{
-		throw std::invalid_argument("missing i128 support on this platform");
-	}
+	static inline uint64_t mulhu(u64 a, u64 b){ return mulu64_128(a,b).first; }
 	#endif
 };
 
