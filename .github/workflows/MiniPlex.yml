@@ -79,7 +79,7 @@ jobs:
         build/MiniPlex -P -p 20002 -r 127.0.0.1 -t 50000 &
         build/MiniPlex -P -p 20003 -r 127.0.0.1 -t 50000 -B 127.0.0.1 -b 50001 &
         build/MiniPlex -T -p 20004 -r 127.0.0.1 -t 50000 -B 127.0.0.1 -b 50001 &
-        build/MiniPlex -X -p 20005 -X -C Examples/SwitchBytecode/SwitchDNP3_CRC.bin &
+        build/MiniPlex -X -p 20005 -C Examples/SwitchBytecode/SwitchDNP3_CRC.bin &
         socat pty,raw,echo=0,link=SerialEndpoint1 pty,raw,echo=0,link=SerialEndpoint2 &
         socat pty,raw,echo=0,link=SerialEndpoint3 pty,raw,echo=0,link=SerialEndpoint4 &
         socat pty,raw,echo=0,link=SerialEndpoint5 pty,raw,echo=0,link=SerialEndpoint6 &
