@@ -76,7 +76,7 @@ private:
 	asio::ip::udp::endpoint trunk;
 
 	std::deque<p_rbuf_t> rcv_buf_q;
-	size_t rcv_buf_count; //not Q size - includes 'in flight' bufs
+	size_t rcv_buf_count = 0; //not Q size - includes 'in flight' bufs
 
 	//atomic rx/tx counts so Benchmark() can access them 'off strand'
 	std::atomic<size_t> rx_count = 0;
