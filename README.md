@@ -12,12 +12,12 @@ ProtoConv: Protocol adapter to convert between a stream and datagrams.
 USAGE: 
 
    ./MiniPlex  {-H|-T|-P|-X} -p <port> [-l <localaddr>] [-Z <rcv buf size>]
-               [-o <timeout>] [-r <trunk host>] [-t <trunk port>] [-B
-               <branch host>] ... [-b <branch port>] ... [-C <switchmode
-               bytecode file>] [-c <console log level>] [-f <file log
-               level>] [-F <log filename>] [-S <size in kB>] [-N <number of
-               files>] [-x <num threads>] [-M] [-m <milliseconds>] [--]
-               [--version] [-h]
+               [-Y <queue size>] [-o <timeout>] [-r <trunk host>] [-t
+               <trunk port>] [-B <branch host>] ... [-b <branch port>] ...
+               [-C <switchmode bytecode file>] [-c <console log level>] [-f
+               <file log level>] [-F <log filename>] [-S <size in kB>] [-N
+               <number of files>] [-x <num threads>] [-M] [-m
+               <milliseconds>] [--] [--version] [-h]
 
 
 Where: 
@@ -46,6 +46,10 @@ Where:
 
    -Z <rcv buf size>,  --so_rcvbuf <rcv buf size>
      Datagram socket receive buffer size.
+
+   -Y <queue size>,  --max_process_q <queue size>
+     Maximun number of datagram buffers to allocate. If this limit is
+     reached, reading the socket is delayed until processing catches up
 
    -o <timeout>,  --timeout <timeout>
      Milliseconds to keep an idle endpoint cached

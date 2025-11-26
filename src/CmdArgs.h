@@ -34,6 +34,8 @@ struct CmdArgs
 		LocalAddr("l", "local", "Local ip address. Defaults to 0.0.0.0 for all ipv4 interfaces.", false, "0.0.0.0", "localaddr"),
 		LocalPort("p", "port", "Local port to listen/receive on.", true, 0, "port"),
 		SoRcvBuf("Z", "so_rcvbuf", "Datagram socket receive buffer size.", false, 512L*1024, "rcv buf size"),
+		MaxProcessQ("Y", "max_process_q", "Maximun number of datagram buffers to allocate. If this limit is reached, reading the socket is delayed until processing catches up",
+				false, 1024, "queue size"),
 		CacheTimeout("o", "timeout", "Milliseconds to keep an idle endpoint cached",false,10000,"timeout"),
 		TrunkAddr("r", "trunk_ip", "Remote trunk ip address.", false, "", "trunk host"),
 		TrunkPort("t", "trunk_port", "Remote trunk port.", false, 0, "trunk port"),
@@ -65,6 +67,7 @@ struct CmdArgs
 		cmd.add(TrunkPort);
 		cmd.add(TrunkAddr);
 		cmd.add(CacheTimeout);
+		cmd.add(MaxProcessQ);
 		cmd.add(SoRcvBuf);
 		cmd.add(LocalAddr);
 		cmd.add(LocalPort);
@@ -103,6 +106,7 @@ struct CmdArgs
 	TCLAP::ValueArg<std::string> LocalAddr;
 	TCLAP::ValueArg<uint16_t> LocalPort;
 	TCLAP::ValueArg<size_t> SoRcvBuf;
+	TCLAP::ValueArg<size_t> MaxProcessQ;
 	TCLAP::ValueArg<size_t> CacheTimeout;
 	TCLAP::ValueArg<std::string> TrunkAddr;
 	TCLAP::ValueArg<uint16_t> TrunkPort;

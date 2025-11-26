@@ -93,10 +93,23 @@ MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 void MiniPlex::Rcv()
 {
 	spdlog::get("MiniPlex")->trace("Rcv(): {} rcv buffers available.",rcv_buf_q.size());
-	if(rcv_buf_q.empty())
+	if(rcv_buf_q.empty()) [[unlikely]]
 	{
-		spdlog::get("MiniPlex")->debug("Rcv(): Allocating another rcv buffer.");
-		rcv_buf_q.push_back(std::make_shared<rbuf_t>());
+		if(rcv_buf_count < Args.MaxProcessQ.getValue())
+		{
+			spdlog::get("MiniPlex")->debug("Rcv(): Allocating another datagram buffer.");
+			rcv_buf_q.push_back(MakeSharedBuf());
+			rcv_buf_count++;
+		}
+		else [[unlikely]]
+		{
+			spdlog::get("MiniPlex")->debug("Rcv(): Max datagram buffers allocated. Delaying read.");
+			//the process strand should be posting writes - so wait for write availabiltiy as a way to delay
+			socket.async_wait(asio::ip::udp::socket::wait_write,socket_strand.wrap([this](asio::error_code)
+			{
+				Rcv();
+			}));
+		}
 	}
 
 	auto pBuf = rcv_buf_q.front();
@@ -108,24 +121,20 @@ void MiniPlex::Rcv()
 		rx_count++;
 		process_strand.post([this,err,pBuf,pRcvSender,n]()
 		{
-			RcvHandler(err,pBuf->data(),*pRcvSender,n);
-			socket_strand.post([this,pBuf]()
-			{
-				rcv_buf_q.push_back(pBuf);
-			});
+			RcvHandler(err,pBuf,*pRcvSender,n);
 		});
 		Rcv();
 	}));
 }
 
-void MiniPlex::RcvHandler(const asio::error_code err, uint8_t* buf, const asio::ip::udp::endpoint& rcv_sender, const size_t n)
+void MiniPlex::RcvHandler(const asio::error_code err, p_rbuf_t buf, const asio::ip::udp::endpoint& rcv_sender, const size_t n)
 {
-	if(err)
+	if(err) [[unlikely]]
 	{
 		spdlog::get("MiniPlex")->error("RcvHandler(): error code {}: '{}'",err.value(),err.message());
 		return;
 	}
-	if(spdlog::get("MiniPlex")->should_log(spdlog::level::trace))
+	if(spdlog::get("MiniPlex")->should_log(spdlog::level::trace)) [[unlikely]]
 	{
 		auto sender_string = rcv_sender.address().to_string()+":"+std::to_string(rcv_sender.port());
 		spdlog::get("MiniPlex")->trace("RcvHandler(): {} bytes from {}",n,sender_string);
@@ -135,49 +144,46 @@ void MiniPlex::RcvHandler(const asio::error_code err, uint8_t* buf, const asio::
 	ModeHandler(branches,rcv_sender,buf,n);
 }
 
-void MiniPlex::Hub(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, uint8_t* buf, const size_t n)
+void MiniPlex::Hub(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, p_rbuf_t buf, const size_t n)
 {
-	auto pForwardBuf = MakeSharedBuf(buf,n);
-	Forward(pForwardBuf,n,rcv_sender,branches,"active branches");
-	Forward(pForwardBuf,n,rcv_sender,InactivePermaBranches,"inactive fixed branches");
+	Forward(buf,n,rcv_sender,branches,"active branches");
+	Forward(buf,n,rcv_sender,InactivePermaBranches,"inactive fixed branches");
 }
 
-void MiniPlex::Trunk(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, uint8_t* buf, const size_t n)
+void MiniPlex::Trunk(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, p_rbuf_t buf, const size_t n)
 {
-	auto pForwardBuf = MakeSharedBuf(buf,n);
 	if(rcv_sender == trunk)
 	{
-		Forward(pForwardBuf,n,rcv_sender,branches,"active branches");
-		Forward(pForwardBuf,n,rcv_sender,InactivePermaBranches,"inactive fixed branches");
+		Forward(buf,n,rcv_sender,branches,"active branches");
+		Forward(buf,n,rcv_sender,InactivePermaBranches,"inactive fixed branches");
 	}
 	else
-		Forward(pForwardBuf,n,rcv_sender,std::list{trunk},"trunk");
+		Forward(buf,n,rcv_sender,std::list{trunk},"trunk");
 }
 
-void MiniPlex::Prune(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, uint8_t* buf, const size_t n)
+void MiniPlex::Prune(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, p_rbuf_t buf, const size_t n)
 {
-	if(rcv_sender != trunk && !branches.empty() && rcv_sender != *branches.begin())
+	if(rcv_sender != trunk && !branches.empty() && rcv_sender != *branches.begin()) [[unlikely]]
 	{
 		auto sender_string = rcv_sender.address().to_string()+":"+std::to_string(rcv_sender.port());
 		spdlog::get("MiniPlex")->debug("Prune(): pruned packet from branch {}",sender_string);
 		return;
 	}
-	auto pForwardBuf = MakeSharedBuf(buf,n);
 	if(rcv_sender == trunk)
 	{
 		if(branches.empty())
-			Forward(pForwardBuf,n,rcv_sender,PermaBranches,"fixed branches");
+			Forward(buf,n,rcv_sender,PermaBranches,"fixed branches");
 		else
-			Forward(pForwardBuf,n,rcv_sender,std::list{*branches.begin()},"active prune branch");
+			Forward(buf,n,rcv_sender,std::list{*branches.begin()},"active prune branch");
 	}
 	else
-		Forward(pForwardBuf,n,rcv_sender,std::list{trunk},"trunk");
+		Forward(buf,n,rcv_sender,std::list{trunk},"trunk");
 }
 
-void MiniPlex::Switch(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, uint8_t* buf, const size_t n)
+void MiniPlex::Switch(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, p_rbuf_t buf, const size_t n)
 {
 	auto [success,src,dst] = GetSrcDst(buf,n);
-	if(!success)
+	if(!success) [[unlikely]]
 	{
 		auto sender_string = rcv_sender.address().to_string()+":"+std::to_string(rcv_sender.port());
 		spdlog::get("MiniPlex")->error("Switch(): Failed to get packet addresses. Branch {}.",sender_string);
@@ -191,33 +197,31 @@ void MiniPlex::Switch(const std::list<asio::ip::udp::endpoint>& branches, const 
 
 	//Only accept packets for a src address if it's on the active branch for that addr
 	const auto& active_src_branch = *src_branches.begin();
-	if(active_src_branch != rcv_sender)
+	if(active_src_branch != rcv_sender) [[unlikely]]
 	{
 		auto sender_string = rcv_sender.address().to_string()+":"+std::to_string(rcv_sender.port());
 		spdlog::get("MiniPlex")->debug("Switch(): dropped packet from branch {} - another branch is active for src addr ({})",sender_string,src);
 		return;
 	}
 
-	auto pForwardBuf = MakeSharedBuf(buf,n);
-
 	//Check if there's an active branch for the dst addr
-	if(dst_branches.empty())
+	if(dst_branches.empty()) [[unlikely]]
 	{
 		//No active branch for that addr - broadcast it to all
-		Forward(pForwardBuf,n,rcv_sender,branches,"active branches");
-		Forward(pForwardBuf,n,rcv_sender,InactivePermaBranches,"inactive fixed branches");
+		Forward(buf,n,rcv_sender,branches,"active branches");
+		Forward(buf,n,rcv_sender,InactivePermaBranches,"inactive fixed branches");
 		return;
 	}
 	//Otherwise just send it to the active associated branch
-	Forward(pForwardBuf,n,rcv_sender,std::list{*dst_branches.begin()},"active address branch");
+	Forward(buf,n,rcv_sender,std::list{*dst_branches.begin()},"active address branch");
 }
 
 //returns: success, src, dst
-std::tuple<bool,uint64_t,uint64_t> MiniPlex::GetSrcDst(uint8_t* buf, const size_t n)
+std::tuple<bool,uint64_t,uint64_t> MiniPlex::GetSrcDst(p_rbuf_t buf, const size_t n)
 {
 	try
 	{
-		auto virt_buf = AddrVM.map_data_mem(buf,n);
+		auto virt_buf = AddrVM.map_data_mem(buf->data(),n);
 		auto src_addr = AddrVM.stack_push<uint64_t>(0);
 		auto dst_addr = AddrVM.stack_push<uint64_t>(0);
 		AddrVM.register_set(10,virt_buf); //a0=&buf;
@@ -234,18 +238,20 @@ std::tuple<bool,uint64_t,uint64_t> MiniPlex::GetSrcDst(uint8_t* buf, const size_
 	return {false,0,0};
 }
 
-inline std::shared_ptr<uint8_t> MiniPlex::MakeSharedBuf(const uint8_t* const buf, const size_t n)
+p_rbuf_t MiniPlex::MakeSharedBuf(rbuf_t* buf)
 {
-	// The C++20 way causes a malloc error when asio tries to copy a handler with this style shared_ptr
-	//auto pForwardBuf = std::make_shared<uint8_t[]>(n);
-	// Use the old way instead - only difference should be the control block is allocated separately
-	auto pForwardBuf = std::shared_ptr<uint8_t>(new uint8_t[n],[](uint8_t* p){delete[] p;});
-	std::memcpy(pForwardBuf.get(),buf,n);
-	return pForwardBuf;
+	auto recycler = socket_strand.wrap([this](rbuf_t* p)
+	{
+		if(!stopping)
+			rcv_buf_q.push_back(MakeSharedBuf(p));
+		else
+			delete p;
+	});
+	return p_rbuf_t(buf ? buf : new rbuf_t, recycler);
 }
 
 template<typename T> void MiniPlex::Forward(
-	const std::shared_ptr<uint8_t>& pBuf,
+	const p_rbuf_t& pBuf,
 	const size_t size,
 	const asio::ip::udp::endpoint& sender,
 	const T& branches,
@@ -257,6 +263,7 @@ template<typename T> void MiniPlex::Forward(
 			socket_strand.post([this,pBuf,size,ep{endpoint}]()
 			{
 				socket.async_send_to(asio::buffer(pBuf.get(),size),ep,[pBuf](asio::error_code,size_t){});
+				tx_count++;
 			});
 }
 
@@ -285,7 +292,7 @@ const std::list<asio::ip::udp::endpoint>& MiniPlex::Branches(const asio::ip::udp
 const std::list<asio::ip::udp::endpoint>& MiniPlex::AddressBranches(const asio::ip::udp::endpoint& ep, const uint64_t addr, const bool associate)
 {
 	//Add cache for address if it doesn't already exist
-	if(!AddrBranches.contains(addr))
+	if(!AddrBranches.contains(addr)) [[unlikely]]
 	{
 		AddrBranches.emplace(addr,TimeoutCache<asio::ip::udp::endpoint>(process_strand,Args.CacheTimeout.getValue(),[addr](const asio::ip::udp::endpoint& cache_ep)
 		{
@@ -324,13 +331,13 @@ void MiniPlex::Benchmark()
 	}
 	const auto duration = std::chrono::milliseconds(Args.BenchDuration.getValue());
 	const auto start_time = std::chrono::steady_clock::now();
-	size_t tx_count = 0;
+	size_t spoof_count = 0;
 	auto elapsed = std::chrono::milliseconds::zero();
 	do
 	{
-		if(tx_count < rx_count+50) //assume os can buffer 50 packets
+		if(spoof_count < rx_count+50) //assume os can buffer 50 packets
 		{
-			auto pSock = &sock_pool[tx_count++%sock_pool_count];
+			auto pSock = &sock_pool[spoof_count++%sock_pool_count];
 			IOC.post([ep{local_ep},pSock]()
 			{
 				auto pForwardBuf = std::shared_ptr<uint8_t>(new uint8_t[500],[](uint8_t* p){delete[] p;});
@@ -341,6 +348,6 @@ void MiniPlex::Benchmark()
 			IOC.poll_one();
 		elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time);
 	}while(elapsed < duration && !IOC.stopped());
-	spdlog::get("MiniPlex")->critical("Benchmark(): RX count {} over {}ms.",rx_count,elapsed.count());
+	spdlog::get("MiniPlex")->critical("Benchmark(): RX/TX count {}/{} over {}ms.",rx_count,tx_count,elapsed.count());
 	std::raise(SIGINT);
 }

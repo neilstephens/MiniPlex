@@ -28,6 +28,9 @@
 #include <tuple>
 #include <functional>
 
+using rbuf_t = std::array<uint8_t, 64L * 1024>;
+using p_rbuf_t = std::shared_ptr<rbuf_t>;
+
 struct CmdArgs;
 
 class MiniPlex
@@ -37,26 +40,27 @@ public:
 	void Benchmark();
 
 private:
-	using rbuf_t = std::array<uint8_t, 64L * 1024>;
 
 	void Rcv();
-	void RcvHandler(const asio::error_code err, uint8_t* buf, const asio::ip::udp::endpoint& rcv_sender, const size_t n);
-	inline std::shared_ptr<uint8_t> MakeSharedBuf(const uint8_t* const buf, const size_t n);
+	void RcvHandler(const asio::error_code err, p_rbuf_t buf, const asio::ip::udp::endpoint& rcv_sender, const size_t n);
+	p_rbuf_t MakeSharedBuf(rbuf_t* buf = nullptr);
 	template<typename T> void Forward(
-		const std::shared_ptr<uint8_t>& pBuf,
+		const p_rbuf_t& pBuf,
 		const size_t size,
 		const asio::ip::udp::endpoint& sender,
 		const T& branches,
 		const char* desc);
 	const std::list<asio::ip::udp::endpoint>& Branches(const asio::ip::udp::endpoint& ep);
 	const std::list<asio::ip::udp::endpoint>& AddressBranches(const asio::ip::udp::endpoint& ep, const uint64_t addr, const bool associate = false);
-	std::tuple<bool,uint64_t,uint64_t> GetSrcDst(uint8_t* buf, const size_t n);
+	std::tuple<bool,uint64_t,uint64_t> GetSrcDst(p_rbuf_t buf, const size_t n);
 
-	void Hub(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, uint8_t* buf, const size_t n);
-	void Trunk(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, uint8_t* buf, const size_t n);
-	void Prune(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, uint8_t* buf, const size_t n);
-	void Switch(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, uint8_t* buf, const size_t n);
-	std::function<void(const std::list<asio::ip::udp::endpoint>&, const asio::ip::udp::endpoint&, uint8_t*, const size_t)> ModeHandler;
+	void Hub(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, p_rbuf_t buf, const size_t n);
+	void Trunk(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, p_rbuf_t buf, const size_t n);
+	void Prune(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, p_rbuf_t buf, const size_t n);
+	void Switch(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, p_rbuf_t buf, const size_t n);
+	std::function<void(const std::list<asio::ip::udp::endpoint>&, const asio::ip::udp::endpoint&, p_rbuf_t, const size_t)> ModeHandler;
+
+	std::atomic_bool stopping = false;
 
 	const CmdArgs& Args;
 	asio::io_context& IOC;
@@ -71,11 +75,12 @@ private:
 	std::set<asio::ip::udp::endpoint> InactivePermaBranches;
 	asio::ip::udp::endpoint trunk;
 
-	std::deque<std::shared_ptr<rbuf_t>> rcv_buf_q;
+	std::deque<p_rbuf_t> rcv_buf_q;
+	size_t rcv_buf_count; //not Q size - includes 'in flight' bufs
 
-	std::atomic_bool stopping = false;
-
+	//atomic rx/tx counts so Benchmark() can access them 'off strand'
 	std::atomic<size_t> rx_count = 0;
+	std::atomic<size_t> tx_count = 0;
 };
 
 #endif // MINIPLEX_H
