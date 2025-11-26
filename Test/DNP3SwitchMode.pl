@@ -5,16 +5,16 @@ use IPC::Open3;
 use Symbol qw(gensym);
 
 my %procs = (
-    '01' => { command => './SendDNP3.pl 20011 127.0.0.1 20005 01 02 50 10' },
-    '02' => { command => './SendDNP3.pl 20012 127.0.0.1 20005 02 01 50 10' },
-    '03' => { command => './SendDNP3.pl 20013 127.0.0.1 20005 03 04 50 10' },
-    '04' => { command => './SendDNP3.pl 20014 127.0.0.1 20005 04 03 50 10' },
-    '05' => { command => './SendDNP3.pl 20015 127.0.0.1 20005 05 06 50 10' },
-    '06' => { command => './SendDNP3.pl 20016 127.0.0.1 20005 06 05 50 10' },
-    '07' => { command => './SendDNP3.pl 20017 127.0.0.1 20005 07 08 50 10' },
-    '08' => { command => './SendDNP3.pl 20018 127.0.0.1 20005 08 07 50 10' },
-    '09' => { command => './SendDNP3.pl 20019 127.0.0.1 20005 09 10 50 10' },
-    '10' => { command => './SendDNP3.pl 20020 127.0.0.1 20005 10 09 50 10' },
+    '01' => { command => 'Test/SendDNP3.pl 20011 127.0.0.1 20005 01 02 50 10' },
+    '02' => { command => 'Test/SendDNP3.pl 20012 127.0.0.1 20005 02 01 50 10' },
+    '03' => { command => 'Test/SendDNP3.pl 20013 127.0.0.1 20005 03 04 50 10' },
+    '04' => { command => 'Test/SendDNP3.pl 20014 127.0.0.1 20005 04 03 50 10' },
+    '05' => { command => 'Test/SendDNP3.pl 20015 127.0.0.1 20005 05 06 50 10' },
+    '06' => { command => 'Test/SendDNP3.pl 20016 127.0.0.1 20005 06 05 50 10' },
+    '07' => { command => 'Test/SendDNP3.pl 20017 127.0.0.1 20005 07 08 50 10' },
+    '08' => { command => 'Test/SendDNP3.pl 20018 127.0.0.1 20005 08 07 50 10' },
+    '09' => { command => 'Test/SendDNP3.pl 20019 127.0.0.1 20005 09 10 50 10' },
+    '10' => { command => 'Test/SendDNP3.pl 20020 127.0.0.1 20005 10 09 50 10' },
 );
 
 # Launch all commands
