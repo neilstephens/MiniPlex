@@ -166,3 +166,13 @@ b3 f3 53 00
 13 05 f0 ff
 67 80 00 00
 ```
+
+### Example - WireGuard
+
+[WireGuard](https://www.wireguard.com/papers/wireguard.pdf) (WG) runs exclusively on UDP, and sessions use 32bit sender and receiver IDs. So it's a perfect candidate for MiniPlex Switch mode.
+
+Using MiniPlex as a central WireGuard switch, you could have a completely ephemeral VPN where all endpoints are dynamic (no fixed addresses and all initiators). MiniPlex would be the only fixed point, and it just forwards encrypted traffic, so the only risk is denial of service even if it's compromised.
+
+It's an interesting [Example](SwitchWireGuard.s), because sessions are established by a handshake which exchanges sender and receiver IDs. Following the handshake, packets only container the receiver ID, so the example showcases the ability for bytecode to use persistent memory for stateful protocols.
+
+Disclaimer: this example hasn't been performance tested. Obvioulsy, funnelling a WG VPN through a userspace app is going to create a performance constraint - your miliage may vary.

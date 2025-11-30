@@ -246,7 +246,7 @@ You can download a pre-built binaries for various platforms from the github [Rel
 ## Example Use Case
 
 Suppose you have a network that doesn't support UDP multicast. Maybe it's disabled for security or performance, or maybe you like firewall policies to have strict point-to-point rules.
-But you would still like to stream UDP packets to multiple endpoints. This is where MiniPlex can help. MiniPlex can convert a single unicast stream into multiple streams. For example:
+But you would still like to stream UDP packets to multiple endpoints. This is where MiniPlex can help. MiniPlex can convert a single unicast stream into multiple streams, or route packets in any number of ways. For example:
 
 ### Stream some audio to multiple endpoints:
 
@@ -271,7 +271,7 @@ vlc udp://@:1234
 
 ### UDP Switch
 
-See [these examples](Examples/SwitchBytecode/README.md) for how to use MiniPlex as a layer 4 UDP switch! 
+See [these examples](Examples/SwitchBytecode/README.md) for how to use MiniPlex as a layer 4 UDP switch! The examples include VXLAN, WireGuard and DNP3, but any address based protocol is possible.
 
 ## Build
 
