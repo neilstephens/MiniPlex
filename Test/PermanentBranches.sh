@@ -21,7 +21,7 @@ exec 5< <((sleep 2 && echo -n 5 && sleep 1) | ncat -u $3 $4)
 sleep 0.1
 exec 6< <((sleep 2 && echo -n 6 && sleep 1) | ncat -u $3 $4)
 
-sleep 3.1
+sleep 3.5
 
 # Read outputs
 OUT3=$(cat <&3)
