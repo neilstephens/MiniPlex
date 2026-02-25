@@ -294,4 +294,4 @@ This will automatically clone and init the submodules repo dependencies for spdl
 ```
 cmake --build MiniPlex-bin
 ```
-You should have a MiniPlex executable in MiniPlex-bin. See the synopis above for how to use it.
+You should have a MiniPlex executable in MiniPlex-bin. See the synopsis above for how to use it.
