@@ -1,12 +1,14 @@
-# MiniPlex version 1.3.0-RC3
+# MiniPlex version 1.3.0
 
-## 1.3.0-RC3
+## 1.3.0
   * MiniPlex 'Switch' mode
     * Provide packet inspection byte-code (RV64IM) to get payload addressing,
       * and MiniPlex can route packets to branches based on src/dst.
     * Included DNP3, VXLAN and WireGuard examples
       * DNP3 is used for the CI tests
   * Fixed duplicate forwarding in Trunk/Hub with fixed branches
+  * Zero copying of UDP receive buffers
+  * Cap on the max number of allocated receive buffers
 
 ## 1.2.0
   * ProtoConv options for max out-of-order frames and timeout
