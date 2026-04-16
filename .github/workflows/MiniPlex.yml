@@ -80,6 +80,9 @@ jobs:
         build/MiniPlex -P -p 20003 -r 127.0.0.1 -t 50000 -B 127.0.0.1 -b 50001 &
         build/MiniPlex -T -p 20004 -r 127.0.0.1 -t 50000 -B 127.0.0.1 -b 50001 &
         build/MiniPlex -X -p 20005 -C Examples/SwitchBytecode/SwitchDNP3_CRC.bin &
+        build/MiniPlex -X -p 20006 -C Examples/SwitchBytecode/SwitchDNP3_CRC_FLOW.bin &
+        build/MiniPlex -X -p 20007 -C Examples/SwitchBytecode/SwitchDNP3_FAST.bin &
+        build/MiniPlex -X -p 20008 -C Examples/SwitchBytecode/SwitchDNP3_FAST_FLOW.bin &
         socat pty,raw,echo=0,link=SerialEndpoint1 pty,raw,echo=0,link=SerialEndpoint2 &
         socat pty,raw,echo=0,link=SerialEndpoint3 pty,raw,echo=0,link=SerialEndpoint4 &
         socat pty,raw,echo=0,link=SerialEndpoint5 pty,raw,echo=0,link=SerialEndpoint6 &
@@ -107,9 +110,24 @@ jobs:
         Test/PruneMode.sh 50000 127.0.0.1 20002
 
     - if: ${{ always() && !contains(matrix.os,'windows') }}
-      name: Test Switch Mode
+      name: Test Switch Mode (one to one address flows)
       run: |
-        Test/DNP3SwitchMode.pl
+        Test/DNP3SwitchMode.pl ./Test/OneToOneDNP3Flows.pl
+
+    - if: ${{ always() && !contains(matrix.os,'windows') }}
+      name: Test Switch Mode (one to many address flows)
+      run: |
+        Test/DNP3SwitchMode.pl ./Test/OneToManyDNP3Flows.pl
+
+    - if: ${{ always() && !contains(matrix.os,'windows') }}
+      name: Test Switch Mode (one to one address flows FAST)
+      run: |
+        Test/DNP3SwitchMode.pl ./Test/OneToOneDNP3FlowsFAST.pl
+
+    - if: ${{ always() && !contains(matrix.os,'windows') }}
+      name: Test Switch Mode (one to many address flows FAST)
+      run: |
+        Test/DNP3SwitchMode.pl ./Test/OneToManyDNP3FlowsFAST.pl
 
     - if: ${{ always() && !contains(matrix.os,'windows') }}
       name: Test Permanent Branches Prune
