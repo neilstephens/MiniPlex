@@ -201,7 +201,8 @@ void MiniPlex::Switch(const std::list<asio::ip::udp::endpoint>& branches, const 
 	if(active_src_branch != rcv_sender) [[unlikely]]
 	{
 		auto sender_string = rcv_sender.address().to_string()+":"+std::to_string(rcv_sender.port());
-		spdlog::get("MiniPlex")->debug("Switch(): dropped packet from branch {} - another branch is active for src addr ({})",sender_string,src);
+		auto active_string = active_src_branch.address().to_string()+":"+std::to_string(active_src_branch.port());
+		spdlog::get("MiniPlex")->debug("Switch(): dropped packet from branch {} - src addr (0x{:016x}) already active on branch {}.",sender_string,src,active_string);
 		return;
 	}
 
@@ -298,7 +299,7 @@ const std::list<asio::ip::udp::endpoint>& MiniPlex::AddressBranches(const asio::
 		AddrBranches.emplace(addr,TimeoutCache<asio::ip::udp::endpoint>(process_strand,Args.CacheTimeout.getValue(),[addr](const asio::ip::udp::endpoint& cache_ep)
 		{
 			auto ep_string = cache_ep.address().to_string()+":"+std::to_string(cache_ep.port());
-			spdlog::get("MiniPlex")->debug("Address ({}) cache timeout for branch {}.",addr,ep_string);
+			spdlog::get("MiniPlex")->debug("Address (0x{:016x}) cache timeout for branch {}.",addr,ep_string);
 		}));
 	}
 
@@ -309,12 +310,12 @@ const std::list<asio::ip::udp::endpoint>& MiniPlex::AddressBranches(const asio::
 		if(added)
 		{
 			auto ep_string = ep.address().to_string()+":"+std::to_string(ep.port());
-			spdlog::get("MiniPlex")->debug("AddressBranches(): New branch ({}) for address {}", ep_string, addr);
+			spdlog::get("MiniPlex")->debug("AddressBranches(): New branch ({}) for address 0x{:016x}", ep_string, addr);
 		}
 		else if(spdlog::get("MiniPlex")->should_log(spdlog::level::trace))
 		{
 			auto ep_string = ep.address().to_string()+":"+std::to_string(ep.port());
-			spdlog::get("MiniPlex")->trace("AddressBranches(): Refreshed branch ({}) for address {}", ep_string, addr);
+			spdlog::get("MiniPlex")->trace("AddressBranches(): Refreshed branch ({}) for address 0x{:016x}", ep_string, addr);
 		}
 	}
 
@@ -349,6 +350,6 @@ void MiniPlex::Benchmark()
 			IOC.poll_one();
 		elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time);
 	}while(elapsed < duration && !IOC.stopped());
-	spdlog::get("MiniPlex")->critical("Benchmark(): RX/TX count {}/{} over {}ms.",rx_count,tx_count,elapsed.count());
+	spdlog::get("MiniPlex")->critical("Benchmark(): RX/TX count {}/{} over {}ms.",rx_count.load(),tx_count.load(),elapsed.count());
 	std::raise(SIGINT);
 }
