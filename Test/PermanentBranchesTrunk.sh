@@ -19,7 +19,7 @@ exec 4< <((sleep 1 && echo -n 4 && sleep 2) | ncat -u -p $2 $3 $4)
 sleep 0.1
 exec 5< <((sleep 1.5 && echo -n 5 && sleep 1.5) | ncat -u $3 $4)
 sleep 0.1
-exec 6< <((sleep 2 && echo -n 6 && sleep 1) | ncat -u $3 $4)
+exec 6< <((sleep 1.8 && echo -n 6 && sleep 1.2) | ncat -u $3 $4)
 
 sleep 6.5
 

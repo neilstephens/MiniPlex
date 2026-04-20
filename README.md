@@ -12,12 +12,13 @@ ProtoConv: Protocol adapter to convert between a stream and datagrams.
 USAGE: 
 
    ./MiniPlex  {-H|-T|-P|-X} -p <port> [-l <localaddr>] [-Z <rcv buf size>]
-               [-Y <queue size>] [-o <timeout>] [-r <trunk host>] [-t
-               <trunk port>] [-B <branch host>] ... [-b <branch port>] ...
-               [-C <switchmode bytecode file>] [-c <console log level>] [-f
-               <file log level>] [-F <log filename>] [-S <size in kB>] [-N
-               <number of files>] [-x <num threads>] [-M] [-m
-               <milliseconds>] [--] [--version] [-h]
+               [-Y <queue size>] [-o <timeout>] [-O <branch cache max>] [-n
+               <switch cache max>] [-r <trunk host>] [-t <trunk port>] [-B
+               <branch host>] ... [-b <branch port>] ... [-C <switchmode
+               bytecode file>] [-c <console log level>] [-f <file log
+               level>] [-F <log filename>] [-S <size in kB>] [-N <number of
+               files>] [-x <num threads>] [-M] [-m <milliseconds>] [--]
+               [--version] [-h]
 
 
 Where: 
@@ -53,6 +54,12 @@ Where:
 
    -o <timeout>,  --timeout <timeout>
      Milliseconds to keep an idle endpoint cached
+
+   -O <branch cache max>,  --branch_cache_max <branch cache max>
+     Max number of entries in the active branch cache
+
+   -n <switch cache max>,  --switch_cache_max <switch cache max>
+     Max number of branches to cache for each switch mode address
 
    -r <trunk host>,  --trunk_ip <trunk host>
      Remote trunk ip address.
