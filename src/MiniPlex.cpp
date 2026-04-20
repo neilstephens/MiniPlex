@@ -202,7 +202,7 @@ void MiniPlex::Switch(const std::list<asio::ip::udp::endpoint>& branches, const 
 	{
 		auto sender_string = rcv_sender.address().to_string()+":"+std::to_string(rcv_sender.port());
 		auto active_string = active_src_branch.address().to_string()+":"+std::to_string(active_src_branch.port());
-		spdlog::get("MiniPlex")->debug("Switch(): dropped packet from branch {} - src addr (0x{:016x}) already active on branch {}.",sender_string,src,active_string);
+		spdlog::get("MiniPlex")->debug("Switch(): dropped packet from branch {} - src addr ({:#x}) already active on branch {}.",sender_string,src,active_string);
 		return;
 	}
 
@@ -299,7 +299,7 @@ const std::list<asio::ip::udp::endpoint>& MiniPlex::AddressBranches(const asio::
 		AddrBranches.emplace(addr,TimeoutCache<asio::ip::udp::endpoint>(process_strand,Args.CacheTimeout.getValue(),[addr](const asio::ip::udp::endpoint& cache_ep)
 		{
 			auto ep_string = cache_ep.address().to_string()+":"+std::to_string(cache_ep.port());
-			spdlog::get("MiniPlex")->debug("Address (0x{:016x}) cache timeout for branch {}.",addr,ep_string);
+			spdlog::get("MiniPlex")->debug("Address ({:#x}) cache timeout for branch {}.",addr,ep_string);
 		}));
 	}
 
@@ -310,12 +310,12 @@ const std::list<asio::ip::udp::endpoint>& MiniPlex::AddressBranches(const asio::
 		if(added)
 		{
 			auto ep_string = ep.address().to_string()+":"+std::to_string(ep.port());
-			spdlog::get("MiniPlex")->debug("AddressBranches(): New branch ({}) for address 0x{:016x}", ep_string, addr);
+			spdlog::get("MiniPlex")->debug("AddressBranches(): Ignored branch ({}) for address {:#x}", ep_string, addr);
 		}
 		else if(spdlog::get("MiniPlex")->should_log(spdlog::level::trace))
 		{
 			auto ep_string = ep.address().to_string()+":"+std::to_string(ep.port());
-			spdlog::get("MiniPlex")->trace("AddressBranches(): Refreshed branch ({}) for address 0x{:016x}", ep_string, addr);
+			spdlog::get("MiniPlex")->trace("AddressBranches(): Refreshed branch ({}) for address {:#x}", ep_string, addr);
 		}
 	}
 
