@@ -23,6 +23,9 @@
 #include <chrono>
 #include <functional>
 #include <list>
+#include <limits>
+
+enum AddResult {REFRESHED,ADDED,DROPPED};
 
 template <typename T>
 class TimeoutCache
@@ -31,22 +34,30 @@ public:
 	TimeoutCache(asio::io_service::strand& Strand, const size_t timeout_ms, std::function<void(const T& key)> timeout_handler = [](const T&){}):
 		Strand(Strand),
 		timeout(timeout_ms),
-		timeout_handler(timeout_handler)
+		timeout_handler(timeout_handler),
+		maxSize(std::numeric_limits<size_t>::max())
 	{}
 	void Clear()
 	{
 		Cache.clear();
 		KeySequence.clear();
 	}
-	bool Add(const T& key)
+	void SetMaxSize(const size_t max)
+	{
+		maxSize = max;
+	}
+	AddResult Add(const T& key)
 	{
 		auto key_entry_it = Cache.find(key);
 		if(key_entry_it != Cache.end())
 		{
 			//Just bump the access time of the existing entry and return
 			key_entry_it->second.AccessTime = std::chrono::steady_clock::now();
-			return false;
+			return AddResult::REFRESHED;
 		}
+
+		if(KeySequence.size() >= maxSize)
+			return AddResult::DROPPED;
 
 		//Add a new entry
 		KeySequence.emplace_back(key);
@@ -55,7 +66,7 @@ public:
 		{
 			TimerHandler(key,err);
 		}));
-		return true;
+		return AddResult::ADDED;
 	}
 	const std::list<T>& Keys() const
 	{
@@ -96,6 +107,7 @@ private:
 	asio::io_service::strand& Strand;
 	const std::chrono::milliseconds timeout;
 	std::function<void(const T& key)> timeout_handler;
+	size_t maxSize;
 	std::unordered_map<T,CacheEntry> Cache;
 	std::list<T> KeySequence;
 };

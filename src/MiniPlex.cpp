@@ -79,6 +79,9 @@ MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 		spdlog::get("MiniPlex")->info("Trunking to {}:{}",Args.TrunkAddr.getValue(),Args.TrunkPort.getValue());
 	}
 
+	if(auto sz = Args.MaxBranchCache.getValue())
+		ActiveBranches.SetMaxSize(sz);
+
 	for(size_t i=0; i<Args.BranchAddrs.getValue().size(); i++)
 	{
 		auto branch = asio::ip::udp::endpoint(asio::ip::address::from_string(Args.BranchAddrs.getValue()[i]),Args.BranchPorts.getValue()[i]);
@@ -274,12 +277,17 @@ const std::list<asio::ip::udp::endpoint>& MiniPlex::Branches(const asio::ip::udp
 {
 	if(ep != trunk)
 	{
-		auto added = ActiveBranches.Add(ep);
-		if(added)
+		auto res = ActiveBranches.Add(ep);
+		if(res == AddResult::ADDED)
 		{
 			InactivePermaBranches.erase(ep);
 			auto ep_string = ep.address().to_string()+":"+std::to_string(ep.port());
 			spdlog::get("MiniPlex")->debug("Branches(): New cache entry for {}",ep_string);
+		}
+		else if(res == AddResult::DROPPED)
+		{
+			auto ep_string = ep.address().to_string()+":"+std::to_string(ep.port());
+			spdlog::get("MiniPlex")->debug("Branches(): Max cache entries - {} not cached.",ep_string);
 		}
 		else if(spdlog::get("MiniPlex")->should_log(spdlog::level::trace))
 		{
@@ -301,13 +309,20 @@ const std::list<asio::ip::udp::endpoint>& MiniPlex::AddressBranches(const asio::
 			auto ep_string = cache_ep.address().to_string()+":"+std::to_string(cache_ep.port());
 			spdlog::get("MiniPlex")->debug("Address ({:#x}) cache timeout for branch {}.",addr,ep_string);
 		}));
+		if(auto sz = Args.MaxSwitchCache.getValue())
+			AddrBranches.at(addr).SetMaxSize(sz);
 	}
 
 	//optionally associate the branch with the address
 	if(associate)
 	{
-		auto added = AddrBranches.at(addr).Add(ep);
-		if(added)
+		auto res = AddrBranches.at(addr).Add(ep);
+		if(res == AddResult::ADDED)
+		{
+			auto ep_string = ep.address().to_string()+":"+std::to_string(ep.port());
+			spdlog::get("MiniPlex")->debug("AddressBranches(): New branch ({}) for address {:#x}", ep_string, addr);
+		}
+		else if(res == AddResult::DROPPED)
 		{
 			auto ep_string = ep.address().to_string()+":"+std::to_string(ep.port());
 			spdlog::get("MiniPlex")->debug("AddressBranches(): Ignored branch ({}) for address {:#x}", ep_string, addr);

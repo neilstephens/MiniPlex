@@ -37,6 +37,8 @@ struct CmdArgs
 		MaxProcessQ("Y", "max_process_q", "Maximun number of datagram buffers to allocate. If this limit is reached, reading the socket is delayed until processing catches up",
 				false, 1024, "queue size"),
 		CacheTimeout("o", "timeout", "Milliseconds to keep an idle endpoint cached",false,10000,"timeout"),
+		MaxBranchCache("O", "branch_cache_max", "Max number of entries in the active branch cache",false,0,"branch cache max"),
+		MaxSwitchCache("n", "switch_cache_max", "Max number of branches to cache for each switch mode address",false,0,"switch cache max"),
 		TrunkAddr("r", "trunk_ip", "Remote trunk ip address.", false, "", "trunk host"),
 		TrunkPort("t", "trunk_port", "Remote trunk port.", false, 0, "trunk port"),
 		BranchAddrs("B", "branch_ip", "Remote endpoint addresses to permanently cache. Use -b to provide respective ports in the same order.", false, "branch host"),
@@ -66,6 +68,8 @@ struct CmdArgs
 		cmd.add(BranchAddrs);
 		cmd.add(TrunkPort);
 		cmd.add(TrunkAddr);
+		cmd.add(MaxSwitchCache);
+		cmd.add(MaxBranchCache);
 		cmd.add(CacheTimeout);
 		cmd.add(MaxProcessQ);
 		cmd.add(SoRcvBuf);
@@ -108,6 +112,8 @@ struct CmdArgs
 	TCLAP::ValueArg<size_t> SoRcvBuf;
 	TCLAP::ValueArg<size_t> MaxProcessQ;
 	TCLAP::ValueArg<size_t> CacheTimeout;
+	TCLAP::ValueArg<size_t>MaxBranchCache;
+	TCLAP::ValueArg<size_t>MaxSwitchCache;
 	TCLAP::ValueArg<std::string> TrunkAddr;
 	TCLAP::ValueArg<uint16_t> TrunkPort;
 	TCLAP::MultiArg<std::string> BranchAddrs;
