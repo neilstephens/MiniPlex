@@ -32,26 +32,26 @@ if(WIN32)
 	add_definitions(-DASIO_HAS_STD_SYSTEM_ERROR)
 	add_definitions(-DVC_EXTRALEAN)
 	add_definitions(-DWIN32_LEAN_AND_MEAN)
-    # Turn off the VS ZERO_CHECK config which runs everytime you build
-    set(CMAKE_SUPPRESS_REGENERATION true)
+	# Turn off the VS ZERO_CHECK config which runs everytime you build
+	set(CMAKE_SUPPRESS_REGENERATION true)
 	# UNICODE support
 	add_definitions(-DUNICODE -D_UNICODE)
 
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /MP /Zc:rvalueCast")
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /MP /Zc:rvalueCast")
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic")
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic")
+	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 	endif()
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libstdc++")
-    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -static-libstdc++")
-    #why is this not automatic with Clang?
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        #need to add these to the link libraries manually
-        set(LIBCXX "c++" "c++abi")
-    endif()
-    # different release and debug flags
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++")
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libstdc++")
+	set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -static-libstdc++")
+	#why is this not automatic with Clang?
+	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+		#need to add these to the link libraries manually
+		set(LIBCXX "c++" "c++abi")
+	endif()
+	# different release and debug flags
 	set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g -fno-omit-frame-pointer")
