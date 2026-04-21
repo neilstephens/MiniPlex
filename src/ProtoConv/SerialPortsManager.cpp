@@ -15,6 +15,7 @@
  *	limitations under the License.
  */
 #include "SerialPortsManager.h"
+#include "Platform.h"
 #include <spdlog/spdlog.h>
 
 SerialPortsManager::SerialPortsManager(asio::io_context& IOC, const std::vector<std::string>& devs, const std::function<void(buf_t&)>& read_handler, const size_t MaxWriteQSz):
@@ -44,9 +45,27 @@ void SerialPortsManager::Start()
 	{
 		port.set_option(port_settings.at(i).baud_rate);
 		port.set_option(port_settings.at(i).character_size);
-		port.set_option(port_settings.at(i).flow_control);
 		port.set_option(port_settings.at(i).parity);
 		port.set_option(port_settings.at(i).stop_bits);
+
+		//asio uses libc to set flow control, but some minimal POSIX libc impls (like musl) don't support hardware flow ctl
+		//  so fall back to native methods (where available) if it fails.
+		auto fd = port.native_handle();
+		bool hard_flow = (port_settings.at(i).flow_control.value() == asio::serial_port::flow_control::hardware);
+		try
+		{
+			port.set_option(port_settings.at(i).flow_control);
+			if(!hard_flow)
+				native_hardware_flow_control(fd,false);
+		}
+		catch(std::exception& e)
+		{
+			if(!hard_flow)
+				throw;
+			//in case the failed attempt left it in an inconsitent state (didn't clear software flow ctl etc)
+			port.set_option(asio::serial_port::flow_control(/*none*/));
+			native_hardware_flow_control(fd,true);
+		}
 
 		auto& strand = strands.at(i);
 		auto& buf = bufs.at(i);

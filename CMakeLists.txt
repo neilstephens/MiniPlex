@@ -55,6 +55,18 @@ else()
 	set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g -fno-omit-frame-pointer")
+
+	#detect if we're using musl
+	execute_process(
+		COMMAND ${CMAKE_CXX_COMPILER} -dumpmachine
+		OUTPUT_VARIABLE COMPILER_TRIPLET
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+	)
+	message("Detecting musl via compiler target: ${COMPILER_TRIPLET}")
+	if(COMPILER_TRIPLET MATCHES "musl")
+		message("Musl detected")
+		add_compile_definitions(MUSL_LIBC)
+	endif()
 endif()
 
 find_package(Threads REQUIRED)
