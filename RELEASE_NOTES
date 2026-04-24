@@ -1,4 +1,11 @@
-# MiniPlex version 1.3.0
+# MiniPlex version 1.3.1
+
+## 1.3.1
+  * ProtoConv:
+    * Support for serial hardware flow control when using musl libc
+  * MiniPlex:
+    * Option to cap number of active branches
+    * More DNP3 switching bytecode examples and tests
 
 ## 1.3.0
   * MiniPlex 'Switch' mode
