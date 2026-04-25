@@ -151,11 +151,20 @@ public:
 		halted = false;
 		size_t count = 0;
 
-		while (!halted && pc+3 < program.size())
+		if(program.size() < 4)
+			throw std::runtime_error("Program too small (must be at least 4 bytes)");
+
+		while (!halted)
 		{
+			if (pc > program.size()-4)
+				throw std::runtime_error("PC jumped program region");
 			if (++count > max_instructions)
 				throw std::runtime_error("Maximum instruction count exceeded");
+
 			execute_instruction();
+
+			if(pc == program.size())
+				halted = true;
 		}
 	}
 
@@ -227,7 +236,7 @@ private:
 					 ((inst & 0x80) << 4) | ((inst >> 20) & 0x7e0) | ((inst >> 7) & 0x1e));
 		const i64 imm_j = ((static_cast<i64>(static_cast<i32>(inst & 0x80000000)) >> 11) |
 					 (inst & 0xff000) | ((inst >> 9) & 0x800) | ((inst >> 20) & 0x7fe));
-		const u64 imm_u = inst & 0xfffff000;
+		const u64 imm_u = static_cast<u64>(static_cast<i64>(static_cast<i32>(inst & 0xfffff000)));
 
 		// Execute
 		x[0] = 0; // Ensure x0 stays zero
@@ -342,13 +351,13 @@ private:
 	{
 		switch(funct3)
 		{
-			case 0: x[rd] = x[rs1] + imm; break;                   // ADDI
-			case 1: x[rd] = x[rs1] << imm; break;                  // SLLI
-			case 2: x[rd] = static_cast<i64>(x[rs1]) < imm; break; // SLTI
-			case 3: x[rd] = x[rs1] < static_cast<u64>(imm); break; // SLTIU
-			case 4: x[rd] = x[rs1] ^ imm; break;                   // XORI
+			case 0: x[rd] = x[rs1] + imm; break;                             // ADDI
+			case 1: x[rd] = x[rs1] << (static_cast<u64>(imm) & 0x3f); break; // SLLI
+			case 2: x[rd] = static_cast<i64>(x[rs1]) < imm; break;           // SLTI
+			case 3: x[rd] = x[rs1] < static_cast<u64>(imm); break;           // SLTIU
+			case 4: x[rd] = x[rs1] ^ imm; break;                             // XORI
 			case 5:
-				if (!(imm&0x400)) x[rd] = x[rs1] >> imm;                               // SRLI
+				if (!(imm&0x400)) x[rd] = x[rs1] >> (static_cast<u64>(imm) & 0x3f);    // SRLI
 				else x[rd] = static_cast<u64>(static_cast<i64>(x[rs1]) >> (imm&0x3f)); // SRAI
 				break;
 			case 6: x[rd] = x[rs1] | imm; break; // ORI
@@ -362,11 +371,11 @@ private:
 		u32 result;
 		switch(funct3)
 		{
-			case 0: result = static_cast<u32>(x[rs1]) + imm; break;    // ADDIW
-			case 1: result = static_cast<u32>(x[rs1]) << imm; break;   // SLLIW
+			case 0: result = static_cast<u32>(x[rs1]) + imm; break;             // ADDIW
+			case 1: result = static_cast<u32>(x[rs1]) << (imm & 0x1f); break;   // SLLIW
 			case 5:
 				if (!(imm&0x400))
-					result = static_cast<u32>(x[rs1]) >> imm;      // SRLIW
+					result = static_cast<u32>(x[rs1]) >> (imm & 0x1f);                 // SRLIW
 				else
 					result = static_cast<u32>(static_cast<i32>(x[rs1]) >> (imm&0x1f)); // SRAIW
 				break;
