@@ -226,6 +226,11 @@ jobs:
         build/MiniPlex -T -p 20001 -r 127.0.0.1 -t 50000 &
         build/MiniPlex -P -p 20002 -r 127.0.0.1 -t 50000 &
         build/MiniPlex -P -p 20003 -r 127.0.0.1 -t 50000 -B 127.0.0.1 -b 50001 &
+        build/MiniPlex -T -p 20004 -r 127.0.0.1 -t 50000 -B 127.0.0.1 -b 50001 &
+        build/MiniPlex -X -p 20005 -C Examples/SwitchBytecode/SwitchDNP3_CRC.bin &
+        build/MiniPlex -X -p 20006 -C Examples/SwitchBytecode/SwitchDNP3_CRC_FLOW.bin &
+        build/MiniPlex -X -p 20007 -C Examples/SwitchBytecode/SwitchDNP3_FAST.bin &
+        build/MiniPlex -X -p 20008 -C Examples/SwitchBytecode/SwitchDNP3_FAST_FLOW.bin &
         socat pty,raw,echo=0,link=SerialEndpoint1 pty,raw,echo=0,link=SerialEndpoint2 &
         socat pty,raw,echo=0,link=SerialEndpoint3 pty,raw,echo=0,link=SerialEndpoint4 &
         socat pty,raw,echo=0,link=SerialEndpoint5 pty,raw,echo=0,link=SerialEndpoint6 &
@@ -253,9 +258,34 @@ jobs:
         Test/PruneMode.sh 50000 127.0.0.1 20002
 
     - if: always()
-      name: Test Permanent Branches
+      name: Test Switch Mode (one to one address flows)
+      run: |
+        Test/DNP3SwitchMode.pl ./Test/OneToOneDNP3Flows.pl
+
+    - if: always()
+      name: Test Switch Mode (one to many address flows)
+      run: |
+        Test/DNP3SwitchMode.pl ./Test/OneToManyDNP3Flows.pl
+
+    - if: always()
+      name: Test Switch Mode (one to one address flows FAST)
+      run: |
+        Test/DNP3SwitchMode.pl ./Test/OneToOneDNP3FlowsFAST.pl
+
+    - if: always()
+      name: Test Switch Mode (one to many address flows FAST)
+      run: |
+        Test/DNP3SwitchMode.pl ./Test/OneToManyDNP3FlowsFAST.pl
+
+    - if: always()
+      name: Test Permanent Branches Prune
       run: |
         Test/PermanentBranches.sh 50000 50001 127.0.0.1 20003
+
+    - if: always()
+      name: Test Permanent Branches Trunk
+      run: |
+        Test/PermanentBranchesTrunk.sh 50000 50001 127.0.0.1 20004
         
     - if: always()
       name: Test ProtoConv Delim
