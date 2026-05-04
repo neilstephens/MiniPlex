@@ -42,6 +42,8 @@
 #include <fstream>
 #include <cstring>
 #include <array>
+#include <format>
+#include <atomic>
 
 namespace TinyRISCV64
 {
@@ -57,13 +59,15 @@ using i64 = int64_t;
 
 class VM
 {
-private:
-	u64 pc;                    // Program counter
-	std::vector<u8> program;   // Program memory
-	std::array<u64,32> x{};    // Registers x0-x31
-	std::vector<u8> stack;     // Stack memory
-	std::span<u8> data;        // Data memory
-	bool halted{false};        // Program exited
+protected:
+	u64 pc;                         // Program counter
+	u32 inst;                       // Current instruction
+	std::vector<u8> program;        // Program memory
+	std::array<u64,32> x{};         // Registers x0-x31
+	std::vector<u8> stack;          // Stack memory
+	std::span<u8> data;             // Data memory
+	std::atomic_bool halted{false}; // Program exited or externally halted
+	const size_t max_prog_size;     // Maximum allowed program image size (bytes)
 
 	// Virtual addressing:
 	static constexpr
@@ -77,13 +81,14 @@ private:
 	u64 s_end;       // Stack mem end
 
 public:
-	VM(const size_t stack_size = 4096): stack(stack_size) { reset(); }
+	VM(const size_t stack_size = 4096, const size_t max_program_size = 1024UL*1024)
+		: stack(stack_size), max_prog_size(max_program_size) { reset(); }
 
-	// Load bytecode from file and return the starting virtual addr
+	// Load program from file and return the virtual start addr
 	//   resets state and invalidates previous virtual addrs
-	u64 program_load(const std::string& prog_filename)
+	virtual u64 program_load(const std::string& prog_filename)
 	{
-		program = load_program(prog_filename);
+		program = load_program(prog_filename, max_prog_size);
 		reset();
 		return p_beg;
 	}
@@ -92,7 +97,10 @@ public:
 	//   resets state and invalidates previous virtual addrs
 	u64 program_load(const u8* const prog, size_t prog_size)
 	{
-		program = load_program(prog,prog_size);
+		if (prog_size > max_prog_size)
+			throw std::invalid_argument(std::format("Program too large (max {} bytes)", max_prog_size));
+		program.resize(prog_size);
+		std::memcpy(program.data(), prog, prog_size);
 		reset();
 		return p_beg;
 	}
@@ -147,32 +155,43 @@ public:
 	// Execute program
 	void execute_program(const u64 entry_point = p_beg, const size_t max_instructions = 100000)
 	{
+		const auto prog_sz = program.size();
+		const auto sentinel_pc = ((prog_sz + 3) & ~3ull);
+
 		pc = entry_point;
 		halted = false;
 		size_t count = 0;
 
-		if(program.size() < 4)
+		if(prog_sz < 4)
 			throw std::runtime_error("Program too small (must be at least 4 bytes)");
 
 		while (!halted)
 		{
-			if (pc > program.size()-4)
+			if (pc > prog_sz-4) [[unlikely]]
 				throw std::runtime_error("PC jumped program region");
-			if (++count > max_instructions)
+			if (++count > max_instructions) [[unlikely]]
 				throw std::runtime_error("Maximum instruction count exceeded");
 
 			execute_instruction();
 
-			if(pc == program.size())
+			if(pc == sentinel_pc) [[unlikely]]
 				halted = true;
 		}
 	}
 
-	void reset()
+	// Halt the program (if it's running)
+	//   This is the only thread safe call - everything else should be called synchronously
+	bool halt_program()
+	{
+		auto alreadyHalted = halted.exchange(true);
+		return !alreadyHalted;
+	}
+
+	virtual void reset()
 	{
 		for(auto& xn : x) xn=0;
 		//x1 - return address (ra)
-		x[1] = program.size();
+		x[1] = (program.size() + 3) & ~3ull;
 		//x2 - stack pointer (sp)
 		x[2] = program.size()+64+data.size()+64+stack.size();
 		//x8 - frame pointer (s0 / fp)
@@ -187,18 +206,18 @@ public:
 		s_end = program.size()+64+data.size()+64+stack.size();
 	}
 
-private:
+protected:
 
 	// Load program from file
-	static std::vector<u8> load_program(const std::string& filename)
+	static std::vector<u8> load_program(const std::string& filename, const size_t max_size)
 	{
 		std::ifstream fin(filename, std::ios::binary | std::ios::ate);
 		if (!fin)
 			throw std::invalid_argument("Failed to open program file: " + filename);
 
 		size_t size = fin.tellg();
-		if (size > 1024L * 1024)
-			throw std::invalid_argument("Program too large (max 1MB)");
+		if (size > max_size)
+			throw std::invalid_argument(std::format("Program too large (max {})", max_size));
 
 		fin.seekg(0, std::ios::beg);
 		std::vector<u8> prog(size);
@@ -206,73 +225,64 @@ private:
 		return prog;
 	}
 
-	// Load program directly
-	static std::vector<u8> load_program(const u8* const prog, const size_t size)
-	{
-		if (size > 1024L * 1024)
-			throw std::invalid_argument("Program too large (max 1MB)");
-
-		std::vector<u8> progr(size);
-		std::memcpy(progr.data(), prog, size);
-		return progr;
+	// Instruction Decoding
+	inline u8 opcode() const { return inst & 0x7f; }
+	inline u8 funct3() const { return (inst >> 12) & 0x7; }
+	inline u8 funct7() const { return (inst >> 25) & 0x7f; }
+	inline u8 rd() const { return (inst >> 7) & 0x1f; }
+	inline u8 rs1() const { return (inst >> 15) & 0x1f; }
+	inline u8 rs2() const { return (inst >> 20) & 0x1f; }
+	inline i64 imm_i() const { return static_cast<i64>(static_cast<i32>(inst) >> 20); }
+	inline i64 imm_s() const { return (imm_i() & ~0x1fLL) | rd(); }
+	inline i64 imm_b() const {
+	    return (static_cast<i64>(static_cast<i32>(inst & 0x80000000)) >> 19) |
+		     ((inst & 0x80) << 4) | ((inst >> 20) & 0x7e0) | ((inst >> 7) & 0x1e);
 	}
+	inline i64 imm_j() const {
+	    return (static_cast<i64>(static_cast<i32>(inst & 0x80000000)) >> 11) |
+		     (inst & 0xff000) | ((inst >> 9) & 0x800) | ((inst >> 20) & 0x7fe);
+	}
+	inline u64 imm_u() const { return static_cast<u64>(static_cast<i64>(static_cast<i32>(inst & 0xfffff000))); }
 
-	void execute_instruction()
+
+	inline void execute_instruction()
 	{
-		u32 inst; memcpy(&inst,&program[pc],4);
+		memcpy(&inst,&program[pc],4);
 		pc += 4;
-
-		// Decode
-		const u8 opcode = inst & 0x7f;
-		const u8 funct3 = (inst >> 12) & 0x7;
-		const u8 funct7 = (inst >> 25) & 0x7f;
-		const u8 rd = (inst >> 7) & 0x1f;
-		const u8 rs1 = (inst >> 15) & 0x1f;
-		const u8 rs2 = (inst >> 20) & 0x1f;
-
-		const i64 imm_i = static_cast<i64>(static_cast<i32>(inst) >> 20);
-		const i64 imm_s = (imm_i & ~0x1fLL) | rd;
-		const i64 imm_b = ((static_cast<i64>(static_cast<i32>(inst & 0x80000000)) >> 19) |
-					 ((inst & 0x80) << 4) | ((inst >> 20) & 0x7e0) | ((inst >> 7) & 0x1e));
-		const i64 imm_j = ((static_cast<i64>(static_cast<i32>(inst & 0x80000000)) >> 11) |
-					 (inst & 0xff000) | ((inst >> 9) & 0x800) | ((inst >> 20) & 0x7fe));
-		const u64 imm_u = static_cast<u64>(static_cast<i64>(static_cast<i32>(inst & 0xfffff000)));
 
 		// Execute
 		x[0] = 0; // Ensure x0 stays zero
 
-		switch(opcode)
+		switch(opcode())
 		{
-			case 0x37: x[rd] = imm_u; break;               // LUI
-			case 0x17: x[rd] = (pc - 4) + imm_u; break;    // AUIPC
-			case 0x6f: x[rd] = pc; pc += imm_j - 4; break; // JAL
-			case 0x67:                                     // JALR
+			case 0x37: x[rd()] = imm_u(); break;               // LUI
+			case 0x17: x[rd()] = (pc - 4) + imm_u(); break;    // AUIPC
+			case 0x6f: x[rd()] = pc; pc += imm_j() - 4; break; // JAL
+			case 0x67:                                         // JALR
 			{
-				const u64 target = (x[rs1] + imm_i) & ~1ULL;
-				x[rd] = pc;
+				const u64 target = (x[rs1()] + imm_i()) & ~1ULL;
+				x[rd()] = pc;
 				pc = target;
 				break;
 			}
-			case 0x63: exec_branch(funct3, rs1, rs2, imm_b); break;                  // Branch
-			case 0x03: exec_load(funct3, rd, rs1, imm_i); break;                     // Load
-			case 0x23: exec_store(funct3, rs1, rs2, imm_s); break;                   // Store
-			case 0x13: exec_alu_imm(funct3, rd, rs1, imm_i); break;                  // ALU immediate
-			case 0x1b: exec_alu_imm32(funct3, rd, rs1, imm_i); break;                // ALU immediate 32-bit
-			case 0x33: exec_alu_reg(funct3, funct7, rd, rs1, rs2); break;            // ALU register
-			case 0x3b: exec_alu_reg32(funct3, funct7, rd, rs1, rs2); break;          // ALU register 32-bit
-			case 0x0f: break;                                                        // FENCE (nop)
-			case 0x73:                                                               // SYSTEM
-				if (inst == 0x00100073) halted = true;                             // EBREAK
-				break;
-			default: throw std::invalid_argument("Unknown opcode");
+			case 0x63: exec_branch(funct3(), rs1(), rs2(), imm_b()); break;           // Branch
+			case 0x03: exec_load(funct3(), rd(), rs1(), imm_i()); break;              // Load
+			case 0x23: exec_store(funct3(), rs1(), rs2(), imm_s()); break;            // Store
+			case 0x13: exec_alu_imm(funct3(), rd(), rs1(), imm_i()); break;           // ALU immediate
+			case 0x1b: exec_alu_imm32(funct3(), rd(), rs1(), imm_i()); break;         // ALU immediate 32-bit
+			case 0x33: exec_alu_reg(funct3(), funct7(), rd(), rs1(), rs2()); break;   // ALU register
+			case 0x3b: exec_alu_reg32(funct3(), funct7(), rd(), rs1(), rs2()); break; // ALU register 32-bit
+			case 0x0f: break;                                                         // FENCE (nop)
+			case 0x73: exec_system(funct3(), rd()); break;                            // SYSTEM
+			default: [[unlikely]] throw std::invalid_argument("Unknown opcode");
 		}
 	}
 
 	// Memory access helpers
 	template<typename T>
-	u8* mem_ptr(u64 addr)
+	inline u8* mem_ptr(u64 addr)
 	{
-		if (addr > 0xFFFFFFFFFFFFFFF0ULL) //guard against wrap-around
+		if (addr > 0xFFFFFFFFFFFFFFF0ULL) [[unlikely]] //guard against wrap-around
 			throw std::runtime_error("Memory access out of bounds");
 
 		const u64 addr_max = addr + sizeof(T) - 1;
@@ -284,11 +294,11 @@ private:
 		if(addr >= s_beg && addr_max < s_end)
 			return stack.data() + addr - s_beg;
 
-		throw std::runtime_error("Memory access out of bounds");
+		[[unlikely]] throw std::runtime_error("Memory access out of bounds");
 	}
 
 	template<typename T>
-	T mem_load(u64 addr)
+	inline T mem_load(u64 addr)
 	{
 		T value;
 		memcpy(&value, mem_ptr<T>(addr), sizeof(T));
@@ -296,7 +306,7 @@ private:
 	}
 
 	template<typename T>
-	void mem_store(u64 addr, T value)
+	inline void mem_store(u64 addr, T value)
 	{
 		memcpy(mem_ptr<T>(addr), &value, sizeof(T));
 	}
@@ -467,6 +477,81 @@ private:
 			default: throw std::invalid_argument("Unknown alu_reg32 operation");
 		}
 		x[rd] = static_cast<i64>(result); // Sign-extend to 64 bits
+	}
+
+	// SYSTEM instruction dispatch (opcode 0x73)
+	inline void exec_system(u8 funct3, u8 rd)
+	{
+		if (funct3 != 0) [[unlikely]]
+		{
+			handle_csr();
+			return;
+		}
+
+		switch (inst)
+		{
+			case 0x00000073: [[likely]] // ECALL
+				handle_ecall();
+				return;
+
+			case 0x00100073: [[likely]] // EBREAK
+			{
+				// Check for the semihosting magic bracket:
+				//   slli zero,zero,0x1f  (0x01f01013)  <-- instruction before ebreak
+				//   ebreak
+				//   srai zero,zero,0x7   (0x40705013)  <-- instruction after ebreak
+				// pc is already advanced past the ebreak at this point.
+				const bool has_prev = (pc >= 8) && mem_load<u32>(pc - 8) == 0x01f01013u;
+				const bool has_next = (pc + 3 < p_end) && mem_load<u32>(pc) == 0x40705013u;
+				if (has_prev && has_next)
+					handle_semihost();
+				else
+					halted = true;
+				return;
+			}
+
+			case 0x10500073: // WFI  (wait for interrupt)
+				throw std::runtime_error(
+					"WFI (wait-for-interrupt) is not supported in this VM; "
+					"remove interrupt-driven idle loops from bare-metal code");
+
+			case 0x30200073: // MRET
+			case 0x10200073: // SRET
+			case 0x00200073: // URET
+				throw std::runtime_error(
+					std::format("Privilege-mode return instruction (MRET/SRET/URET, inst=0x{:x}) at pc=0x{:x}: this VM has no privilege levels",
+						inst, pc - 4));
+
+			default: [[unlikely]]
+				throw std::invalid_argument(
+					std::format("Unknown SYSTEM instruction 0x{:x} at pc=0x{:x}",
+						inst, pc - 4));
+		}
+	}
+
+	// CSR instructions (CSRRW, CSRRS, CSRRC, CSRRWI, CSRRSI, CSRRCI)
+	virtual void handle_csr()
+	{
+		const auto d = rd();
+		// Stub: All CSRs read as 0; write side-effects are ignored
+		if (d != 0)
+			x[d] = 0;
+	}
+
+	virtual void handle_semihost()
+	{
+		throw std::runtime_error(
+			std::format("Semihosting call at pc=0x{:x} is not supported in this VM; "
+				"implement handle_semihost() to support semihosting operations",
+				pc - 4));
+	}
+
+	virtual void handle_ecall()
+	{
+		throw std::runtime_error(
+			std::format("ECALL at pc=0x{:x} is not supported in this VM; "
+				"implement handle_ecall() to support system calls",
+				pc - 4));
 	}
 
 	// For 128-bit multiplication - TODO: use platform intrinsics (_umul128 on MSVC and __int128 specifically for GCC/Clang)
