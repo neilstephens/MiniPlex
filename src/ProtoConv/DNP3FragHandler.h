@@ -28,10 +28,8 @@ struct FragCmp
 {
 	bool operator()(const Frame& l, const Frame& r)
 	{
-		if(r.fir) return true;
-		if(l.fir) return false;
-		if(r.fin) return false;
-		if(l.fin) return true;
+		if(r.fir != l.fir) return r.fir;
+		if(r.fin != l.fin) return !r.fin;
 		if(l.seq > r.seq)
 		{
 			if((l.seq - r.seq) < (r.seq+64 - l.seq)) return true;

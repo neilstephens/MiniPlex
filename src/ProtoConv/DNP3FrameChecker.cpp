@@ -120,6 +120,8 @@ inline size_t CRCCheckedLength(const buf_t& readbuf)
 		return 0;
 
 	size_t length = good_n_len.second;
+	if(length < 5)
+		return 0;
 	//length at this point is the number of user data bytes + 5 header bytes
 	const auto user_data = length-5;
 	return length +

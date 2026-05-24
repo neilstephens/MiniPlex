@@ -67,7 +67,7 @@ MiniPlex::MiniPlex(const CmdArgs& Args, asio::io_context& IOC):
 		catch (const std::exception& e)
 		{
 			spdlog::get("MiniPlex")->critical("Switch mode VM load/validate error: {}",e.what());
-			throw std::exception(e);
+			throw;
 		}
 	}
 	else
