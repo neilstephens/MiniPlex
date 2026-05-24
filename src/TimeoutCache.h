@@ -93,7 +93,7 @@ private:
 		}
 		KeySequence.erase(entry.KeySequenceIterator);
 		Cache.erase(key);
-		Strand.context().post([this,key]{timeout_handler(key);});
+		Strand.post([this,key]{timeout_handler(key);});
 	}
 	struct CacheEntry
 	{
