@@ -245,14 +245,14 @@ std::tuple<bool,uint64_t,uint64_t> MiniPlex::GetSrcDst(p_rbuf_t buf, const size_
 
 p_rbuf_t MiniPlex::MakeSharedBuf(rbuf_t* buf)
 {
-	auto recycler = socket_strand.wrap([this](rbuf_t* p)
+	auto recycler = socket_strand.wrap([pIOS{&IOC},this](rbuf_t* p)
 	{
-		if(!stopping)
+		if(!pIOS->stopped())
 			rcv_buf_q.push_back(MakeSharedBuf(p));
 		else
 			delete p;
 	});
-	return p_rbuf_t(buf ? buf : new rbuf_t, recycler);
+	return p_rbuf_t(buf ? buf : new rbuf_t, std::move(recycler));
 }
 
 template<typename T> void MiniPlex::Forward(

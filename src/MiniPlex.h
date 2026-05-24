@@ -60,8 +60,6 @@ private:
 	void Switch(const std::list<asio::ip::udp::endpoint>& branches, const asio::ip::udp::endpoint& rcv_sender, p_rbuf_t buf, const size_t n);
 	std::function<void(const std::list<asio::ip::udp::endpoint>&, const asio::ip::udp::endpoint&, p_rbuf_t, const size_t)> ModeHandler;
 
-	std::atomic_bool stopping = false;
-
 	const CmdArgs& Args;
 	asio::io_context& IOC;
 	const asio::ip::udp::endpoint local_ep;
