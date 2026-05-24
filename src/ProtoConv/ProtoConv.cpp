@@ -162,7 +162,7 @@ void ProtoConv::RcvStreamHandler(buf_t& buf)
 	{
 		if(frame.len > buf.size())
 		{
-			spdlog::get("ProtoConv")->error("RcvStreamHandler(): Frame checker claims frame size (), which is > size of buffer ().",frame.len,buf.size());
+			spdlog::get("ProtoConv")->error("RcvStreamHandler(): Frame checker claims frame size ({}), which is > size of buffer ({}).",frame.len,buf.size());
 			frame.len = buf.size();
 		}
 		// The C++20 way causes a malloc error when asio tries to copy a handler with this style shared_ptr
