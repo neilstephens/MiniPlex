@@ -104,7 +104,7 @@ bool TCPSocketManager::Connected()
 			executed = true;
 		});
 	while(!executed)
-		IOS.poll_one();
+		if(!IOS.poll_one()) std::this_thread::yield();
 	return result;
 }
 
@@ -116,7 +116,7 @@ TCPSocketManager::~TCPSocketManager()
 	handler_tracker.reset();
 
 	while(!tracker.expired() && !IOS.stopped())
-		IOS.poll_one();
+		if(!IOS.poll_one()) std::this_thread::yield();
 
 	LogCallback("debug","Write total "+std::to_string(write_count)+" bytes for "+host_name+":"+service_name);
 }

@@ -191,7 +191,7 @@ SerialPortsManager::~SerialPortsManager()
 	handler_tracker.reset();
 
 	while(!tracker.expired() && !IOC.stopped())
-		IOC.poll_one();
+		if(!IOC.poll_one()) std::this_thread::yield();
 }
 
 void SerialPortsManager::Read(asio::io_context::strand& strand, asio::serial_port& port, buf_t& buf, std::shared_ptr<void> tracker)
