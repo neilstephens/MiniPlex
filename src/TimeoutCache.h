@@ -34,7 +34,7 @@ public:
 	TimeoutCache(asio::io_service::strand& Strand, const size_t timeout_ms, std::function<void(const T& key)> timeout_handler = [](const T&){}):
 		Strand(Strand),
 		timeout(timeout_ms),
-		timeout_handler(timeout_handler),
+		timeout_handler(std::move(timeout_handler)),
 		maxSize(std::numeric_limits<size_t>::max())
 	{}
 	void Clear()
@@ -45,6 +45,7 @@ public:
 	void SetMaxSize(const size_t max)
 	{
 		maxSize = max;
+		Cache.reserve(max);
 	}
 	AddResult Add(const T& key)
 	{
